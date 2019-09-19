@@ -91,7 +91,7 @@ public:
   void publishTransform();
 
   void staticMapCallback(const nav_msgs::OccupancyGrid& map);
-  void initialPoseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
+  void initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
 
   /*
   void setStaticMapData(const nav_msgs::OccupancyGrid& map);
@@ -109,8 +109,8 @@ protected:
   ros::Subscriber sysMsgSubscriber_;
 
   ros::Subscriber mapSubscriber_;
-  message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped>* initial_pose_sub_;
-  tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>* initial_pose_filter_;
+  message_filters::Subscriber<geometry_msgs::PoseStamped>* initial_pose_sub_;
+  tf::MessageFilter<geometry_msgs::PoseStamped>* initial_pose_filter_;
 
   ros::Publisher posePublisher_;
   ros::Publisher poseUpdatePublisher_;

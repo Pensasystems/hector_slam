@@ -200,8 +200,8 @@ HectorMappingRos::HectorMappingRos()
   }
   */
 
-  initial_pose_sub_ = new message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped>(node_, "initialpose", 2);
-  initial_pose_filter_ = new tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>(*initial_pose_sub_, tf_, p_map_frame_, 2);
+  initial_pose_sub_ = new message_filters::Subscriber<geometry_msgs::PoseStamped>(node_, "initialpose", 2);
+  initial_pose_filter_ = new tf::MessageFilter<geometry_msgs::PoseStamped>(*initial_pose_sub_, tf_, p_map_frame_, 2);
   initial_pose_filter_->registerCallback(boost::bind(&HectorMappingRos::initialPoseCallback, this, _1));
 
 
@@ -556,14 +556,12 @@ void HectorMappingRos::staticMapCallback(const nav_msgs::OccupancyGrid& map)
 
 }
 
-void HectorMappingRos::initialPoseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg)
+void HectorMappingRos::initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg)
 {
   initial_pose_set_ = true;
 
   tf::Pose pose;
-  tf::poseMsgToTF(msg->pose.pose, pose);
-  initial_pose_ = Eigen::Vector3f(msg->pose.pose.position.x, msg->pose.pose.position.y, tf::getYaw(pose.getRotation()));
+  tf::poseMsgToTF(msg->pose, pose);
+  initial_pose_ = Eigen::Vector3f(msg->pose.position.x, msg->pose.position.y, tf::getYaw(pose.getRotation()));
   ROS_INFO("Setting initial pose with world coords x: %f y: %f yaw: %f", initial_pose_[0], initial_pose_[1], initial_pose_[2]);
 }
-
-
