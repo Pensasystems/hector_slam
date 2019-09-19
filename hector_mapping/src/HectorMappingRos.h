@@ -51,6 +51,7 @@
 
 #include "PoseInfoContainer.h"
 
+#include <std_srvs/SetBool.h>
 
 class HectorDrawings;
 class HectorDebugInfoProvider;
@@ -78,6 +79,8 @@ public:
 
   void publishMap(MapPublisherContainer& map_, const hectorslam::GridMap& gridMap, ros::Time timestamp, MapLockerInterface* mapMutex = 0);
 
+  bool pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp);
+	
   bool rosLaserScanToDataContainer(const sensor_msgs::LaserScan& scan, hectorslam::DataContainer& dataContainer, float scaleToMap);
   bool rosPointCloudToDataContainer(const sensor_msgs::PointCloud& pointCloud, const tf::StampedTransform& laserTransform, hectorslam::DataContainer& dataContainer, float scaleToMap);
 
@@ -115,6 +118,8 @@ protected:
   ros::Publisher odometryPublisher_;
   ros::Publisher scan_point_cloud_publisher_;
 
+  ros::ServiceServer pauseServiceServer_;
+	
   std::vector<MapPublisherContainer> mapPubContainer;
 
   tf::TransformListener tf_;
@@ -140,6 +145,8 @@ protected:
   bool initial_pose_set_;
   Eigen::Vector3f initial_pose_;
 
+  bool nodePaused_;
+	
 
   //-----------------------------------------------------------
   // Parameters

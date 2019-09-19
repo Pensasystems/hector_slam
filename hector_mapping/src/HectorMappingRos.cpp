@@ -47,6 +47,7 @@ HectorMappingRos::HectorMappingRos()
   : debugInfoProvider(0)
   , hectorDrawings(0)
   , lastGetMapUpdateIndex(-100)
+  , nodePaused_(false)	
   , tfB_(0)
   , map__publish_thread_(0)
   , initial_pose_set_(false)
@@ -112,6 +113,8 @@ HectorMappingRos::HectorMappingRos()
     hectorDrawings = new HectorDrawings();
   }
 
+  pauseServiceServer_ = node_.advertiseService("pause", &HectorMappingRos::pauseCallback, this);
+  
   if(p_pub_debug_output_)
   {
     ROS_INFO("HectorSM publishing debug info");
@@ -228,6 +231,8 @@ HectorMappingRos::~HectorMappingRos()
 
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 {
+  if (nodePaused_) return;
+	
   if (hectorDrawings)
   {
     hectorDrawings->setTime(scan.header.stamp);
@@ -362,6 +367,14 @@ void HectorMappingRos::sysMsgCallback(const std_msgs::String& string)
     ROS_INFO("HectorSM reset");
     slamProcessor->reset();
   }
+}
+
+bool HectorMappingRos::pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp)
+{
+	nodePaused_ = req.data;
+	slamProcessor->reset();
+	rsp.success = true;
+	return true;
 }
 
 bool HectorMappingRos::mapCallback(nav_msgs::GetMap::Request  &req,
