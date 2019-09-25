@@ -47,7 +47,7 @@ HectorMappingRos::HectorMappingRos()
   : debugInfoProvider(0)
   , hectorDrawings(0)
   , lastGetMapUpdateIndex(-100)
-  , nodePaused_(false)	
+  , nodePaused_(true)	
   , tfB_(0)
   , map__publish_thread_(0)
   , initial_pose_set_(false)
@@ -371,9 +371,12 @@ void HectorMappingRos::sysMsgCallback(const std_msgs::String& string)
 
 bool HectorMappingRos::pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp)
 {
-	nodePaused_ = req.data;
-	slamProcessor->reset();
-	rsp.success = true;
+	if (nodePaused_ != req.data)
+	{
+		nodePaused_ = req.data;
+		slamProcessor->reset();
+		rsp.success = true;
+	}
 	return true;
 }
 
@@ -558,10 +561,9 @@ void HectorMappingRos::staticMapCallback(const nav_msgs::OccupancyGrid& map)
 
 void HectorMappingRos::initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg)
 {
-  initial_pose_set_ = true;
-
   tf::Pose pose;
   tf::poseMsgToTF(msg->pose, pose);
   initial_pose_ = Eigen::Vector3f(msg->pose.position.x, msg->pose.position.y, tf::getYaw(pose.getRotation()));
   ROS_INFO("Setting initial pose with world coords x: %f y: %f yaw: %f", initial_pose_[0], initial_pose_[1], initial_pose_[2]);
+  initial_pose_set_ = true;  
 }
