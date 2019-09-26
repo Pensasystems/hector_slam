@@ -561,6 +561,9 @@ void HectorMappingRos::staticMapCallback(const nav_msgs::OccupancyGrid& map)
 
 void HectorMappingRos::initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg)
 {
+  // Only accept an initial pose when the node is paused. Otherwise, this becomes an online pose reset.
+  if (!nodePaused_) return;
+  
   tf::Pose pose;
   tf::poseMsgToTF(msg->pose, pose);
   initial_pose_ = Eigen::Vector3f(msg->pose.position.x, msg->pose.position.y, tf::getYaw(pose.getRotation()));
