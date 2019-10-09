@@ -41,6 +41,7 @@
 
 #include "laser_geometry/laser_geometry.h"
 #include "nav_msgs/GetMap.h"
+#include "nav_msgs/Odometry.h"
 
 #include "slam_main/HectorSlamProcessor.h"
 
@@ -79,6 +80,7 @@ public:
 
   void publishMap(MapPublisherContainer& map_, const hectorslam::GridMap& gridMap, ros::Time timestamp, MapLockerInterface* mapMutex = 0);
 
+  bool holdCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp);
   bool pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp);
 	
   bool rosLaserScanToDataContainer(const sensor_msgs::LaserScan& scan, hectorslam::DataContainer& dataContainer, float scaleToMap);
@@ -89,7 +91,8 @@ public:
   void publishTransformLoop(double p_transform_pub_period_);
   void publishMapLoop(double p_map_pub_period_);
   void publishTransform();
-
+  void publishHeldPosition(const ros::TimerEvent& e);
+	
   void staticMapCallback(const nav_msgs::OccupancyGrid& map);
   void initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
 
@@ -119,6 +122,9 @@ protected:
   ros::Publisher scan_point_cloud_publisher_;
 
   ros::ServiceServer pauseServiceServer_;
+  ros::ServiceServer holdServiceServer_;	
+
+  ros::Timer positionHoldTimer_;
 	
   std::vector<MapPublisherContainer> mapPubContainer;
 
@@ -146,7 +152,8 @@ protected:
   Eigen::Vector3f initial_pose_;
 
   bool nodePaused_;
-	
+  bool positionHold_;
+  nav_msgs::Odometry lastOdomMsg_;	
 
   //-----------------------------------------------------------
   // Parameters

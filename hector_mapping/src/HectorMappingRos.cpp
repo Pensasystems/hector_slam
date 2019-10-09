@@ -47,7 +47,8 @@ HectorMappingRos::HectorMappingRos()
   : debugInfoProvider(0)
   , hectorDrawings(0)
   , lastGetMapUpdateIndex(-100)
-  , nodePaused_(true)	
+  , nodePaused_(true)
+  , positionHold_(false)
   , tfB_(0)
   , map__publish_thread_(0)
   , initial_pose_set_(false)
@@ -113,6 +114,7 @@ HectorMappingRos::HectorMappingRos()
     hectorDrawings = new HectorDrawings();
   }
 
+  holdServiceServer_ = node_.advertiseService("position_hold", &HectorMappingRos::holdCallback, this);
   pauseServiceServer_ = node_.advertiseService("pause", &HectorMappingRos::pauseCallback, this);
   
   if(p_pub_debug_output_)
@@ -210,6 +212,8 @@ HectorMappingRos::HectorMappingRos()
   map_to_odom_.setIdentity();
 
   lastMapPublishTime = ros::Time(0,0);
+
+  positionHoldTimer_ = private_nh_.createTimer(ros::Duration(0.2), &HectorMappingRos::publishHeldPosition, this, false);
 }
 
 HectorMappingRos::~HectorMappingRos()
@@ -229,9 +233,14 @@ HectorMappingRos::~HectorMappingRos()
     delete map__publish_thread_;
 }
 
+void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
+{
+	odometryPublisher_.publish(lastOdomMsg_);
+}
+
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 {
-  if (nodePaused_) return;
+  if (nodePaused_ || positionHold_) return;
 	
   if (hectorDrawings)
   {
@@ -333,6 +342,7 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     tmp.header = poseInfoContainer_.getPoseWithCovarianceStamped().header;
     tmp.child_frame_id = p_base_frame_;
     odometryPublisher_.publish(tmp);
+	lastOdomMsg_ = tmp;
   }
 
   if (p_pub_map_odom_transform_)
@@ -367,6 +377,26 @@ void HectorMappingRos::sysMsgCallback(const std_msgs::String& string)
     ROS_INFO("HectorSM reset");
     slamProcessor->reset();
   }
+}
+
+bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp)
+{
+	if (positionHold_ != req.data)
+	{
+		positionHold_ = req.data;
+		rsp.success = true;
+
+		if (positionHold_)
+		{
+			positionHoldTimer_.setPeriod(ros::Duration(0.2), true);
+			positionHoldTimer_.start();
+		}
+		else
+		{
+			positionHoldTimer_.stop();
+		}
+	}
+	return true;
 }
 
 bool HectorMappingRos::pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp)
