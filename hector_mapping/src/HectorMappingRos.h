@@ -128,6 +128,7 @@ protected:
 	
   std::vector<MapPublisherContainer> mapPubContainer;
 
+  tf::StampedTransform lastMapToOdomTf_, lastScanMatchTf_;
   tf::TransformListener tf_;
   tf::TransformBroadcaster* tfB_;
 

@@ -213,7 +213,11 @@ HectorMappingRos::HectorMappingRos()
 
   lastMapPublishTime = ros::Time(0,0);
 
-  positionHoldTimer_ = private_nh_.createTimer(ros::Duration(0.2), &HectorMappingRos::publishHeldPosition, this, false);
+  positionHoldTimer_ = private_nh_.createTimer(ros::Duration(0.2),
+											   &HectorMappingRos::publishHeldPosition,
+											   this,
+											   false,
+											   false);
 }
 
 HectorMappingRos::~HectorMappingRos()
@@ -236,6 +240,8 @@ HectorMappingRos::~HectorMappingRos()
 void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
 {
 	odometryPublisher_.publish(lastOdomMsg_);
+	tfB_->sendTransform( lastScanMatchTf_);
+    tfB_->sendTransform( lastMapToOdomTf_ );	
 }
 
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
@@ -360,11 +366,13 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
       odom_to_base.setIdentity();
     }
     map_to_odom_ = tf::Transform(poseInfoContainer_.getTfTransform() * odom_to_base.inverse());
-    tfB_->sendTransform( tf::StampedTransform (map_to_odom_, scan.header.stamp, p_map_frame_, p_odom_frame_));
+	lastMapToOdomTf_ = tf::StampedTransform(map_to_odom_, scan.header.stamp, p_map_frame_, p_odom_frame_);
+    tfB_->sendTransform( lastMapToOdomTf_ );
   }
 
   if (p_pub_map_scanmatch_transform_){
-    tfB_->sendTransform( tf::StampedTransform(poseInfoContainer_.getTfTransform(), scan.header.stamp, p_map_frame_, p_tf_map_scanmatch_transform_frame_name_));
+	  lastScanMatchTf_ = tf::StampedTransform(poseInfoContainer_.getTfTransform(), scan.header.stamp, p_map_frame_, p_tf_map_scanmatch_transform_frame_name_);
+	  tfB_->sendTransform( lastScanMatchTf_); 
   }
 }
 
