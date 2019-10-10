@@ -239,6 +239,10 @@ HectorMappingRos::~HectorMappingRos()
 
 void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
 {
+	lastOdomMsg_.header.stamp = ros::Time::now();
+	lastScanMatchTf_.stamp_ = ros::Time::now();
+	lastMapToOdomTf_.stamp_ = ros::Time::now();
+	
 	odometryPublisher_.publish(lastOdomMsg_);
 	tfB_->sendTransform( lastScanMatchTf_);
     tfB_->sendTransform( lastMapToOdomTf_ );	
