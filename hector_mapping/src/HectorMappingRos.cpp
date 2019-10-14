@@ -393,6 +393,13 @@ void HectorMappingRos::sysMsgCallback(const std_msgs::String& string)
 
 bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp)
 {
+	// Perhaps easier to do this from the user side. And there might be a case where we want this behavior.
+	//if (nodePaused_)
+	//{
+	//	rsp.success = false;
+	//	return false;
+	//}
+	
 	if (positionHold_ != req.data)
 	{
 		positionHold_ = req.data;
@@ -416,7 +423,7 @@ bool HectorMappingRos::pauseCallback(std_srvs::SetBool::Request& req, std_srvs::
 	if (nodePaused_ != req.data)
 	{
 		nodePaused_ = req.data;
-		slamProcessor->reset();
+		if (nodePaused_) slamProcessor->reset();
 		rsp.success = true;
 	}
 	return true;
@@ -604,7 +611,7 @@ void HectorMappingRos::staticMapCallback(const nav_msgs::OccupancyGrid& map)
 void HectorMappingRos::initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg)
 {
   // Only accept an initial pose when the node is paused. Otherwise, this becomes an online pose reset.
-  if (!nodePaused_) return;
+  if (!nodePaused_ && !positionHold_) return;
   
   tf::Pose pose;
   tf::poseMsgToTF(msg->pose, pose);
