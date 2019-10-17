@@ -242,10 +242,12 @@ void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
 	lastOdomMsg_.header.stamp = ros::Time::now();
 	lastScanMatchTf_.stamp_ = ros::Time::now();
 	lastMapToOdomTf_.stamp_ = ros::Time::now();
-	
-	odometryPublisher_.publish(lastOdomMsg_);
-	tfB_->sendTransform( lastScanMatchTf_);
-    tfB_->sendTransform( lastMapToOdomTf_ );	
+        odometryPublisher_.publish(lastOdomMsg_);
+        tfB_->sendTransform( lastScanMatchTf_);
+     	   tfB_->sendTransform( lastMapToOdomTf_ );
+         lastOdomMsg_.pose.pose.position.x += .00001;
+         lastOdomMsg_.pose.pose.position.y += .00001;
+  
 }
 
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
@@ -348,7 +350,8 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
   {
     nav_msgs::Odometry tmp;
     tmp.pose = poseInfoContainer_.getPoseWithCovarianceStamped().pose;
-
+    tmp.pose.pose.position.x=(tmp.pose.pose.position.x*cos(0.0872665))-(tmp.pose.pose.position.y*sin(0.0872665));
+    tmp.pose.pose.position.y=(tmp.pose.pose.position.x*sin(0.0872665))+(tmp.pose.pose.position.y*cos(0.0872665));
     tmp.header = poseInfoContainer_.getPoseWithCovarianceStamped().header;
     tmp.child_frame_id = p_base_frame_;
     odometryPublisher_.publish(tmp);

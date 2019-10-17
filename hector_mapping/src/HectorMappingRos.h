@@ -154,7 +154,9 @@ protected:
 
   bool nodePaused_;
   bool positionHold_;
-  nav_msgs::Odometry lastOdomMsg_;	
+  nav_msgs::Odometry lastOdomMsg_;
+  nav_msgs::Odometry twolastOdomMsg_;	
+	
 
   //-----------------------------------------------------------
   // Parameters
