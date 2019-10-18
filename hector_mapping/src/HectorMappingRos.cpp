@@ -426,7 +426,7 @@ bool HectorMappingRos::pauseCallback(std_srvs::SetBool::Request& req, std_srvs::
 	if (nodePaused_ != req.data)
 	{
 		nodePaused_ = req.data;
-		if (nodePaused_) slamProcessor->reset();
+		//if (nodePaused_) slamProcessor->reset();
 		rsp.success = true;
 	}
 	return true;
