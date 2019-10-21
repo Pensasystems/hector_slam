@@ -242,12 +242,11 @@ void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
 	lastOdomMsg_.header.stamp = ros::Time::now();
 	lastScanMatchTf_.stamp_ = ros::Time::now();
 	lastMapToOdomTf_.stamp_ = ros::Time::now();
-        odometryPublisher_.publish(lastOdomMsg_);
-        tfB_->sendTransform( lastScanMatchTf_);
-     	   tfB_->sendTransform( lastMapToOdomTf_ );
-         lastOdomMsg_.pose.pose.position.x += .00001;
-         lastOdomMsg_.pose.pose.position.y += .00001;
-  
+	odometryPublisher_.publish(lastOdomMsg_);
+	tfB_->sendTransform( lastScanMatchTf_);
+	tfB_->sendTransform( lastMapToOdomTf_ );
+	lastOdomMsg_.pose.pose.position.x += .00001;
+	lastOdomMsg_.pose.pose.position.y += .00001;
 }
 
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
@@ -620,5 +619,12 @@ void HectorMappingRos::initialPoseCallback(const geometry_msgs::PoseStampedConst
   tf::poseMsgToTF(msg->pose, pose);
   initial_pose_ = Eigen::Vector3f(msg->pose.position.x, msg->pose.position.y, tf::getYaw(pose.getRotation()));
   ROS_INFO("Setting initial pose with world coords x: %f y: %f yaw: %f", initial_pose_[0], initial_pose_[1], initial_pose_[2]);
-  initial_pose_set_ = true;  
+  initial_pose_set_ = true;
+
+  if (positionHold_)
+  {
+	  // Note: this does not change the transforms!!!
+	  lastOdomMsg_.pose.pose.orientation = msg->pose.orientation;
+  }
 }
+
