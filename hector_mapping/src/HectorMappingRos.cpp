@@ -31,6 +31,7 @@
 #include "map/GridMap.h"
 
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 
 #include "sensor_msgs/PointCloud2.h"
@@ -51,6 +52,7 @@ HectorMappingRos::HectorMappingRos()
   , positionHold_(false)
   , tfB_(0)
   , map__publish_thread_(0)
+  // ,vislamControl(false)
   , initial_pose_set_(false)
 {
   ros::NodeHandle private_nh_("~");
@@ -114,8 +116,18 @@ HectorMappingRos::HectorMappingRos()
     hectorDrawings = new HectorDrawings();
   }
 
-  holdServiceServer_ = node_.advertiseService("position_hold", &HectorMappingRos::holdCallback, this);
-  pauseServiceServer_ = node_.advertiseService("pause", &HectorMappingRos::pauseCallback, this);
+  // holdServiceServer_ = node_.advertiseService("position_hold", &HectorMappingRos::holdCallback, this);
+  // pauseServiceServer_ = node_.advertiseService("pause", &HectorMappingRos::pauseCallback, this);
+
+  holdServiceServer_ = node_.advertiseService("/hector_mapping/position_hold", &HectorMappingRos::holdCallback, this);
+
+  pauseServiceServer_ = node_.advertiseService("/hector_mapping/pause", &HectorMappingRos::pauseCallback, this);
+
+  mavrosPoseSub_ = node_.subscribe("/mavros/vision_pose/pose", 1,&HectorMappingRos::mavrosPoseCB, this);
+  mavrosPublisher_ = node_.advertise<geometry_msgs::PoseStamped>("mavros/test", 50);
+  pauseServiceClient_ = node_.serviceClient<std_srvs::SetBool>("vilamwithCov_pause");	
+
+
   
   if(p_pub_debug_output_)
   {
@@ -125,7 +137,7 @@ HectorMappingRos::HectorMappingRos()
 
   if(p_pub_odometry_)
   {
-    odometryPublisher_ = node_.advertise<nav_msgs::Odometry>("scanmatch_odom", 50);
+    odometryPublisher_ = node_.advertise<nav_msgs::Odometry>("vislam/posewithcov", 50);
   }
 
   slamProcessor = new hectorslam::HectorSlamProcessor(static_cast<float>(p_map_resolution_), p_map_size_, p_map_size_, Eigen::Vector2f(p_map_start_x_, p_map_start_y_), p_map_multi_res_levels_, hectorDrawings, debugInfoProvider);
@@ -251,7 +263,10 @@ void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
 
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 {
-  if (nodePaused_ || positionHold_) return;
+  if (nodePaused_ || positionHold_) {
+    vislamControl(true); 
+    return;
+  }
 	
   if (hectorDrawings)
   {
@@ -353,8 +368,54 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     tmp.pose.pose.position.y=(tmp.pose.pose.position.x*sin(0.0872665))+(tmp.pose.pose.position.y*cos(0.0872665));
     tmp.header = poseInfoContainer_.getPoseWithCovarianceStamped().header;
     tmp.child_frame_id = p_base_frame_;
-    odometryPublisher_.publish(tmp);
-	lastOdomMsg_ = tmp;
+        for(int16_t i=0;i<6;i++){
+        for(int16_t j=0; j<6; j++){
+              tmp.pose.covariance[ i*6 + j ] =  0.000000001*tmp.pose.covariance[ i*6 + j ];
+        }
+    }
+    ROS_INFO("Before condition");
+    //Ros_INFO(currentPose_.pose.position.x);
+    std::cout<<fabs(currentPose_.pose.position.x)<< std::endl;
+    std::cout<<fabs(currentPose_.pose.position.y)<< std::endl;
+
+
+    if ( 1.85 < (fabs(currentPose_.pose.position.x)) ||  1.85 < (fabs(currentPose_.pose.position.y))){
+      ROS_INFO("1.85 < (fabs(currentPose_.pose.position.x)) |  1.85 < (fabs(currentPose_.pose.position.x))");
+      if ( 2.05 > (fabs(currentPose_.pose.position.x)) ||  2.05 > (fabs(currentPose_.pose.position.y))){
+        ROS_INFO("( 2.05 > (fabs(currentPose_.pose.position.x)) |  2.05 > (fabs(currentPose_.pose.position.x)))");
+        /// check fo x
+        if ((fabs(currentPose_.pose.position.x-tmp.pose.pose.position.x)) < 0.05 ){
+          tmp.pose.pose.position.x=tmp.pose.pose.position.x;
+        }
+        else
+        {
+          tmp.pose.pose.position.x += (tanh(fabs(currentPose_.pose.position.x-tmp.pose.pose.position.x)))*0.05;
+        }//end check for x
+        ///check for y
+        if ((fabs(currentPose_.pose.position.y-tmp.pose.pose.position.y)) < 0.05) {
+          tmp.pose.pose.position.y=tmp.pose.pose.position.y;
+        }
+        else
+        {
+          tmp.pose.pose.position.y += (tanh(fabs(currentPose_.pose.position.y-tmp.pose.pose.position.y)))*0.05;
+        }//end check for y
+        // odometryPublisher_.publish(tmp);
+	      // lastOdomMsg_ = tmp;
+      }
+      
+      
+      odometryPublisher_.publish(tmp);
+	    lastOdomMsg_ = tmp;
+      ///pause
+      vislamControl(false);
+    
+    }
+
+    else{
+      vislamControl(true);
+    }
+    // odometryPublisher_.publish(tmp);
+	  // lastOdomMsg_ = tmp;
   }
 
   if (p_pub_map_odom_transform_)
@@ -419,6 +480,19 @@ bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::S
 	}
 	return true;
 }
+    
+
+
+  void HectorMappingRos::mavrosPoseCB (const geometry_msgs::PoseStampedConstPtr& msg)
+  {
+    currentPose_= *msg;
+    currentPose_.header.stamp = ros::Time::now();
+	  // currentPose_.stamp_ = ros::Time::now();
+	  // currentPose_.stamp_ = ros::Time::now();
+    mavrosPublisher_.publish(currentPose_);
+
+    
+  }
 
 bool HectorMappingRos::pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp)
 {
@@ -583,7 +657,17 @@ void HectorMappingRos::setStaticMapData(const nav_msgs::OccupancyGrid& map)
   slamProcessor = new hectorslam::HectorSlamProcessor(cell_length, map_size_x, map_size_y, Eigen::Vector2f(0.0f, 0.0f), 1, hectorDrawings, debugInfoProvider);
 }
 */
+void HectorMappingRos::vislamControl(bool pauseVislam)
+{
 
+	std_srvs::SetBool msg;
+	msg.request.data = pauseVislam;
+	std::string output = "Hector SM: position hold " + std::string(msg.request.data ? "start" : "end");
+	if (!pauseServiceClient_.call(msg)) ROS_ERROR_STREAM(output.c_str() << " error");
+	else ROS_DEBUG_STREAM(output);
+
+
+}
 
 void HectorMappingRos::publishMapLoop(double map_pub_period)
 {

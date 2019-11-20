@@ -95,6 +95,10 @@ public:
 	
   void staticMapCallback(const nav_msgs::OccupancyGrid& map);
   void initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
+  void mavrosPoseCB(const geometry_msgs::PoseStampedConstPtr& msg);
+
+  //
+  void vislamControl(bool pauseVislam);
 
   /*
   void setStaticMapData(const nav_msgs::OccupancyGrid& map);
@@ -121,8 +125,13 @@ protected:
   ros::Publisher odometryPublisher_;
   ros::Publisher scan_point_cloud_publisher_;
 
+  ros:: Subscriber mavrosPoseSub_;
+  ros::Publisher mavrosPublisher_;
+
   ros::ServiceServer pauseServiceServer_;
   ros::ServiceServer holdServiceServer_;	
+  ros::ServiceClient pauseServiceClient_;
+
 
   ros::Timer positionHoldTimer_;
 	
@@ -156,6 +165,7 @@ protected:
   bool positionHold_;
   nav_msgs::Odometry lastOdomMsg_;
   nav_msgs::Odometry twolastOdomMsg_;	
+  geometry_msgs::PoseStamped currentPose_;
 	
 
   //-----------------------------------------------------------
