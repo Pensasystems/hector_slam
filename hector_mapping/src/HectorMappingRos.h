@@ -96,9 +96,11 @@ public:
   void staticMapCallback(const nav_msgs::OccupancyGrid& map);
   void initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
   void mavrosPoseCB(const geometry_msgs::PoseStampedConstPtr& msg);
+  void vislamOdomCB (const nav_msgs::OdometryPtr& msg);
+  void setpointCB (const geometry_msgs::PoseStampedPtr& msg);
 
   //
-  void vislamControl(bool pauseVislam);
+  //void vislamControl(bool pauseVislam);
 
   /*
   void setStaticMapData(const nav_msgs::OccupancyGrid& map);
@@ -128,9 +130,14 @@ protected:
   ros:: Subscriber mavrosPoseSub_;
   ros::Publisher mavrosPublisher_;
 
+  ros:: Subscriber vislamOdomSub_;
+
+  ros:: Subscriber setpointSub_;
+
+
   ros::ServiceServer pauseServiceServer_;
   ros::ServiceServer holdServiceServer_;	
-  ros::ServiceClient pauseServiceClient_;
+  //ros::ServiceClient pauseServiceClient_;
 
 
   ros::Timer positionHoldTimer_;
@@ -166,6 +173,15 @@ protected:
   nav_msgs::Odometry lastOdomMsg_;
   nav_msgs::Odometry twolastOdomMsg_;	
   geometry_msgs::PoseStamped currentPose_;
+  nav_msgs::Odometry vislamOdom_;
+  double yaw_new_;
+  double residual_x_;
+  double residual_y_;
+  double yend_;
+  double xend_;
+  double current_pose_y_;
+  double previous_pose_y_;
+  double angle_y_;
 	
 
   //-----------------------------------------------------------
@@ -190,6 +206,8 @@ protected:
   bool p_pub_map_odom_transform_;
   bool p_pub_odometry_;
   bool p_advertise_map_service_;
+  bool forward_way_;
+  bool flag_test_;
   int p_scan_subscriber_queue_size_;
 
   double p_update_factor_free_;
