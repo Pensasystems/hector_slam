@@ -171,6 +171,7 @@ protected:
   bool nodePaused_;
   bool positionHold_;
   nav_msgs::Odometry lastOdomMsg_;
+  nav_msgs::Odometry lastOdomMsgYaw_;
   nav_msgs::Odometry twolastOdomMsg_;	
   geometry_msgs::PoseStamped currentPose_;
   nav_msgs::Odometry vislamOdom_;

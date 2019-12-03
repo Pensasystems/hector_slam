@@ -268,21 +268,22 @@ void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
 {
   ROS_INFO(" stop.............................................Start");
   //if (nodePaused_){
-	  lastOdomMsg_.header.stamp = ros::Time::now();
+	  lastOdomMsgYaw_.header.stamp = ros::Time::now();
 	  lastScanMatchTf_.stamp_ = ros::Time::now();
 	  lastMapToOdomTf_.stamp_ = ros::Time::now();
 	  // odometryPublisher_.publish(lastOdomMsg_);
 	  // tfB_->sendTransform( lastScanMatchTf_);
 	  // tfB_->sendTransform( lastMapToOdomTf_ );
     if (nodePaused_ || positionHold_) {
-      lastOdomMsg_.pose.pose.position.x += residual_x_;
-      lastOdomMsg_.pose.pose.position.y += residual_y_;
-
-      std::cout<< "update last msg"<<std::cout;
+      lastOdomMsgYaw_.pose.pose.position.x = (vislamOdom_.pose.pose.position.x-residual_x_)+lastOdomMsg_.pose.pose.position.x;
+      lastOdomMsgYaw_.pose.pose.position.y = (vislamOdom_.pose.pose.position.y-residual_y_)+lastOdomMsg_.pose.pose.position.y;
 
 
-      std::cout<< residual_x_<<std::cout;
-      std::cout<< residual_y_<<std::cout;
+      std::cout<< "update last msg"<<std::endl;
+
+
+      std::cout<< residual_x_<<std::endl;
+      std::cout<< residual_y_<<std::endl;
       yend_=lastOdomMsg_.pose.pose.position.y;
       xend_=lastOdomMsg_.pose.pose.position.x;
     }
@@ -298,18 +299,18 @@ void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
     // lastOdomMsg_.pose.covariance[28] = .0000014;
     // lastOdomMsg_.pose.covariance[35] = .0000021;
 
-    lastOdomMsg_.pose.covariance [0] = vislamOdom_.pose.covariance [0];
-    lastOdomMsg_.pose.covariance [7] =  vislamOdom_.pose.covariance [7];
-    lastOdomMsg_.pose.covariance [14] = vislamOdom_.pose.covariance [14];
-    lastOdomMsg_.pose.covariance [21] = vislamOdom_.pose.covariance [21];
-    lastOdomMsg_.pose.covariance [28] = vislamOdom_.pose.covariance [28];
-    lastOdomMsg_.pose.covariance [35] = vislamOdom_.pose.covariance [35];
-    lastOdomMsg_.child_frame_id = p_base_frame_;
-    lastOdomMsg_.header.frame_id= p_map_frame_;
+    lastOdomMsgYaw_.pose.covariance [0] = vislamOdom_.pose.covariance [0];
+    lastOdomMsgYaw_.pose.covariance [7] =  vislamOdom_.pose.covariance [7];
+    lastOdomMsgYaw_.pose.covariance [14] = vislamOdom_.pose.covariance [14];
+    lastOdomMsgYaw_.pose.covariance [21] = vislamOdom_.pose.covariance [21];
+    lastOdomMsgYaw_.pose.covariance [28] = vislamOdom_.pose.covariance [28];
+    lastOdomMsgYaw_.pose.covariance [35] = vislamOdom_.pose.covariance [35];
+    lastOdomMsgYaw_.child_frame_id = p_base_frame_;
+    lastOdomMsgYaw_.header.frame_id= p_map_frame_;
     // lastOdomMsg_.header.stamp = ros::Time::now();
 	  // lastScanMatchTf_.stamp_ = ros::Time::now();
 	  // lastMapToOdomTf_.stamp_ = ros::Time::now();
-    odometryPublisher_.publish(lastOdomMsg_);
+    odometryPublisher_.publish(lastOdomMsgYaw_);
     ROS_INFO(" stop...............................................");
 
 
@@ -339,12 +340,12 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     initial_pose_ = Eigen::Vector3f(currentPose_.pose.position.x, currentPose_.pose.position.y,yaw_new_);
     initial_pose_set_ = true;
     ROS_INFO(" I am initiated");
-    nav_msgs::Odometry lastOdomMsg_;
+    nav_msgs::Odometry lastOdomMsgYaw_;
     if (!flag_test_){
-      lastOdomMsg_.pose.pose.position.x = vislamOdom_.pose.pose.position.x;
-      lastOdomMsg_.pose.pose.position.y = vislamOdom_.pose.pose.position.y;
-      lastOdomMsg_.pose.pose.orientation.z = vislamOdom_.pose.pose.orientation.z;
-      lastOdomMsg_.pose.pose.orientation.w = vislamOdom_.pose.pose.orientation.w;
+      lastOdomMsgYaw_.pose.pose.position.x = vislamOdom_.pose.pose.position.x;
+      lastOdomMsgYaw_.pose.pose.position.y = vislamOdom_.pose.pose.position.y;
+      lastOdomMsgYaw_.pose.pose.orientation.z = vislamOdom_.pose.pose.orientation.z;
+      lastOdomMsgYaw_.pose.pose.orientation.w = vislamOdom_.pose.pose.orientation.w;
       ROS_INFO(" I am initiated with vislam");
    
     // else if (flag_test_){
@@ -354,19 +355,19 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     //   lastOdomMsg_.pose.pose.orientation.w = currentPose_.pose.orientation.w;
     //   ROS_INFO(" I am initiated with Mavros");
     // }
-    lastOdomMsg_.pose.covariance [0] = vislamOdom_.pose.covariance [0];
-    lastOdomMsg_.pose.covariance [7] =  vislamOdom_.pose.covariance [7];
-    lastOdomMsg_.pose.covariance [14] = vislamOdom_.pose.covariance [14];
-    lastOdomMsg_.pose.covariance [21] = vislamOdom_.pose.covariance [21];
-    lastOdomMsg_.pose.covariance [28] = vislamOdom_.pose.covariance [28];
-    lastOdomMsg_.pose.covariance [35] = vislamOdom_.pose.covariance [35];
-    lastOdomMsg_.child_frame_id = p_base_frame_;
-    lastOdomMsg_.header.frame_id= p_map_frame_;
-    lastOdomMsg_.header.stamp = ros::Time::now();
+    lastOdomMsgYaw_.pose.covariance [0] = vislamOdom_.pose.covariance [0];
+    lastOdomMsgYaw_.pose.covariance [7] =  vislamOdom_.pose.covariance [7];
+    lastOdomMsgYaw_.pose.covariance [14] = vislamOdom_.pose.covariance [14];
+    lastOdomMsgYaw_.pose.covariance [21] = vislamOdom_.pose.covariance [21];
+    lastOdomMsgYaw_.pose.covariance [28] = vislamOdom_.pose.covariance [28];
+    lastOdomMsgYaw_.pose.covariance [35] = vislamOdom_.pose.covariance [35];
+    lastOdomMsgYaw_.child_frame_id = p_base_frame_;
+    lastOdomMsgYaw_.header.frame_id= p_map_frame_;
+    lastOdomMsgYaw_.header.stamp = ros::Time::now();
 	  lastScanMatchTf_.stamp_ = ros::Time::now();
 	  lastMapToOdomTf_.stamp_ = ros::Time::now();
 
-    odometryPublisher_.publish(lastOdomMsg_);
+    odometryPublisher_.publish(lastOdomMsgYaw_);
     }
     ROS_INFO(" stop...............................................");
 
@@ -491,30 +492,35 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
       // if ( 2.05 > (fabs(currentPose_.pose.position.x)) ||  2.05 > (fabs(currentPose_.pose.position.y))){
       //   ROS_INFO("( 2.05 > (fabs(currentPose_.pose.position.x)) |  2.05 > (fabs(currentPose_.pose.position.x)))");
         /// check fo x
-        if ((fabs(lastOdomMsg_.pose.pose.position.x-tmp.pose.pose.position.x)) > 0.10 ){
+        // if ((fabs(lastOdomMsg_.pose.pose.position.x-tmp.pose.pose.position.x)) > 0.10 ){
           
-          tmp.pose.pose.position.x = lastOdomMsg_.pose.pose.position.x+(tanh((lastOdomMsg_.pose.pose.position.x-tmp.pose.pose.position.x)))*0.05;
-        }
-        else
-        {
-          tmp.pose.pose.position.x=tmp.pose.pose.position.x;
-        }//end check for x
-        // ///check for y
-        if ((fabs(lastOdomMsg_.pose.pose.position.y-tmp.pose.pose.position.y)) > 0.10) {
+        //   tmp.pose.pose.position.x = lastOdomMsg_.pose.pose.position.x+(tanh((lastOdomMsg_.pose.pose.position.x-tmp.pose.pose.position.x)))*0.05;
+        // }
+        // else
+        // {
+        //   tmp.pose.pose.position.x=tmp.pose.pose.position.x;
+        // }//end check for x
+        // // ///check for y
+        // if ((fabs(lastOdomMsg_.pose.pose.position.y-tmp.pose.pose.position.y)) > 0.10) {
           
-          tmp.pose.pose.position.y = lastOdomMsg_.pose.pose.position.x + (tanh((lastOdomMsg_.pose.pose.position.y-tmp.pose.pose.position.y)))*0.05;
-        }
-        else
-        {
-          tmp.pose.pose.position.y=tmp.pose.pose.position.y;
-        }//end check for y
+        //   tmp.pose.pose.position.y = lastOdomMsg_.pose.pose.position.x + (tanh((lastOdomMsg_.pose.pose.position.y-tmp.pose.pose.position.y)))*0.05;
+        // }
+        // else
+        // {
+        //   tmp.pose.pose.position.y=tmp.pose.pose.position.y;
+        // }//end check for y
         // odometryPublisher_.publish(tmp);
 	      // lastOdomMsg_ = tmp;
       // }
+
+      std::cout<<  tmp.pose.pose.position.x<<std::endl;
+      std::cout<<  tmp.pose.pose.position.y<<std::endl;
       
       flag_test_=true;
       odometryPublisher_.publish(tmp);
 	    lastOdomMsg_ = tmp;
+      residual_x_=  vislamOdom_.pose.pose.position.x;
+      residual_y_=  vislamOdom_.pose.pose.position.y;
       ///pause
       //vislamControl(false);
       //forward_way_(false);
@@ -658,8 +664,8 @@ bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::S
   void HectorMappingRos::vislamOdomCB (const nav_msgs::OdometryPtr& msg)
   {
 
-    residual_x_=vislamOdom_.pose.pose.position.x-(msg->pose.pose.position.x);
-    residual_y_=vislamOdom_.pose.pose.position.y-(msg->pose.pose.position.y);
+    // residual_x_=(msg->pose.pose.position.x)-vislamOdom_.pose.pose.position.x;
+    // residual_y_=(msg->pose.pose.position.y)-vislamOdom_.pose.pose.position.y;
     vislamOdom_= *msg;
     vislamOdom_.header.stamp = ros::Time::now();
 
@@ -902,6 +908,8 @@ void HectorMappingRos::initialPoseCallback(const geometry_msgs::PoseStampedConst
   {
 	  // Note: this does not change the transforms!!!
 	  lastOdomMsg_.pose.pose.orientation = msg->pose.orientation;
+    lastOdomMsgYaw_.pose.pose.orientation = lastOdomMsg_.pose.pose.orientation;
+    
   }
 }
 
