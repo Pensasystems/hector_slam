@@ -130,6 +130,9 @@ protected:
   ros:: Subscriber mavrosPoseSub_;
   ros::Publisher mavrosPublisher_;
 
+  ros::Publisher poseEkfPublisher_;
+
+
   ros:: Subscriber vislamOdomSub_;
 
   ros:: Subscriber setpointSub_;
@@ -173,6 +176,7 @@ protected:
   nav_msgs::Odometry lastOdomMsg_;
   nav_msgs::Odometry lastOdomMsgYaw_;
   nav_msgs::Odometry twolastOdomMsg_;	
+  geometry_msgs::PoseStamped ekfPose_;
   geometry_msgs::PoseStamped currentPose_;
   nav_msgs::Odometry vislamOdom_;
   double yaw_new_;
