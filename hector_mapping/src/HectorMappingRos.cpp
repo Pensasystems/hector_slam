@@ -52,6 +52,7 @@ HectorMappingRos::HectorMappingRos()
   , positionHold_(false)
   ,forward_way_(false)
   ,flag_test_(false)
+  ,landing_flag(false)
   ,yaw_new_(0)
   , tfB_(0)
   , map__publish_thread_(0)
@@ -138,6 +139,8 @@ HectorMappingRos::HectorMappingRos()
   vislamOdomSub_ = node_.subscribe("/vislam/odometry", 1,&HectorMappingRos::vislamOdomCB, this);
 
   setpointSub_ = node_.subscribe("/mavros/setpoint_position/local", 1,&HectorMappingRos::setpointCB, this);
+
+  missionStatusSub_=node_.subscribe("/drone_arbiter/mission",1,&HectorMappingRos::missionStatusCB, this);
 
   mavrosPublisher_ = node_.advertise<nav_msgs::Odometry>("mavros/test", 50);
   poseEkfPublisher_ = node_.advertise<geometry_msgs::PoseStamped>("ekf/pose", 50);
@@ -290,11 +293,19 @@ void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
     ekfPose_.pose.orientation.w=vislamOdom_.pose.pose.orientation.w;
       std::cout<< "update last msg"<<std::endl;
 
+      std::cout<< "lastOdomMsgYaw_.pose.pose.position.x"<<std::endl;
+      std::cout<< lastOdomMsgYaw_.pose.pose.position.x<<std::endl;
+
+      std::cout<< "lastOdomMsgYaw_.pose.pose.position.y"<<std::endl;
+
+      std::cout<< lastOdomMsgYaw_.pose.pose.position.y<<std::endl;
+
+
 
       std::cout<< residual_x_<<std::endl;
       std::cout<< residual_y_<<std::endl;
-      yend_=lastOdomMsg_.pose.pose.position.y;
-      xend_=lastOdomMsg_.pose.pose.position.x;
+      yend_=lastOdomMsgYaw_.pose.pose.position.y;
+      xend_=lastOdomMsgYaw_.pose.pose.position.x;
     }
 
     // lastOdomMsg_.pose.pose.position.x = currentPose_.pose.position.x;
@@ -536,7 +547,6 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
       
       flag_test_=true;
       odometryPublisher_.publish(tmp);
-	    lastOdomMsg_ = tmp;
       residual_x_=  vislamOdom_.pose.pose.position.x;
       residual_y_=  vislamOdom_.pose.pose.position.y;
       ///pause
@@ -549,6 +559,20 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 
     // }
     // }
+    if ( fabs(vislamOdom_.pose.pose.position.y) > 2.30) {
+      std::cout<<  fabs(vislamOdom_.pose.pose.position.y)<<std::endl;
+      ROS_INFO("settesd flag");
+
+       }
+     
+
+     if (landing_flag){
+           tmp.pose.pose.position.x=(((tmp.pose.pose.position.x))*cos(angle_y_))-(((tmp.pose.pose.position.y)-(yend_))*sin(angle_y_));
+           tmp.pose.pose.position.y=(((tmp.pose.pose.position.x)-(xend_))*sin(angle_y_))+(((tmp.pose.pose.position.y))*cos(angle_y_));
+           ROS_INFO("settesd landing and angle ...................................");
+
+     }
+
 
     // else if (forward_way_){
     //   //vislamControl(true);
@@ -558,6 +582,54 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     // odometryPublisher_.publish(tmp);
 	  // lastOdomMsg_ = tmp;
     ekfPose_.header=tmp.header;
+    // ekfPose_.pose.position.x=tmp.pose.pose.position.x;
+    // ekfPose_.pose.position.y=tmp.pose.pose.position.y;
+      //   if ((landing_flag) && (fabs(vislamOdom_.pose.pose.position.y)) < 1.5){
+      // //  tmp.pose.pose.position.x=vislamOdom_.pose.pose.position.x;
+      // //  tmp.pose.pose.position.y=vislamOdom_.pose.pose.position.y;
+      //     // tmp.pose.pose.position.x=(((tmp.pose.pose.position.x))*cos(angle_y_))-(((tmp.pose.pose.position.y)-(yend_))*sin(angle_y_));
+      //     // tmp.pose.pose.position.y=(((tmp.pose.pose.position.x)-(xend_))*sin(angle_y_))+(((tmp.pose.pose.position.y))*cos(angle_y_));
+
+      //   if ((fabs(lastOdomMsg_.pose.pose.position.x-vislamOdom_.pose.pose.position.x)) > 0.02 ){
+
+      //       if ((lastOdomMsg_.pose.pose.position.x)>(vislamOdom_.pose.pose.position.x)){
+          
+      //       tmp.pose.pose.position.x = lastOdomMsg_.pose.pose.position.x-0.02;
+      //       }
+      //       if ((lastOdomMsg_.pose.pose.position.x)<(vislamOdom_.pose.pose.position.x)){
+          
+      //       tmp.pose.pose.position.x = lastOdomMsg_.pose.pose.position.x+0.02;
+      //       }
+
+      //       ROS_INFO("Changed to vislam in the loop");
+
+      //   }
+      //   else
+      //   {
+      //        tmp.pose.pose.position.x=vislamOdom_.pose.pose.position.x;
+      //                    ROS_INFO("Changed to vislam out the loop");
+
+      //   }//end check for x
+      //   // ///check for y
+      //   // if ((fabs(lastOdomMsg_.pose.pose.position.y-vislamOdom_.pose.pose.position.y)) > 0.02 ){
+
+      //   //     if ((lastOdomMsg_.pose.pose.position.y)>(vislamOdom_.pose.pose.position.y)){
+          
+      //   //     tmp.pose.pose.position.y = lastOdomMsg_.pose.pose.position.y-0.02;
+      //   //     }
+      //   //     if ((lastOdomMsg_.pose.pose.position.y)<(vislamOdom_.pose.pose.position.y)){
+          
+      //   //     tmp.pose.pose.position.y = lastOdomMsg_.pose.pose.position.y+0.02;
+      //   //     }          
+      //   // }
+      //   // else
+      //   // {
+      //   //   tmp.pose.pose.position.y=vislamOdom_.pose.pose.position.y;
+      //   // }//end check for y
+      //   flag_test_=false;
+
+      //  ROS_INFO("Changed to vislam");
+      //   }
     ekfPose_.pose.position.x=tmp.pose.pose.position.x;
     ekfPose_.pose.position.y=tmp.pose.pose.position.y;
     ekfPose_.pose.position.z=vislamOdom_.pose.pose.position.z;
@@ -565,6 +637,9 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     ekfPose_.pose.orientation.y=vislamOdom_.pose.pose.orientation.y;
     ekfPose_.pose.orientation.z=vislamOdom_.pose.pose.orientation.z;
     ekfPose_.pose.orientation.w=vislamOdom_.pose.pose.orientation.w;
+
+  	lastOdomMsg_ = tmp;
+          std::cout<< "lasmessag is " <<lastOdomMsg_.pose.pose.position.x<< "  "<<lastOdomMsg_.pose.pose.position.x<<std::endl;
 
 
 
@@ -653,7 +728,7 @@ bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::S
       if (  (1.4 <= (fabs(currentPose_.pose.position.y) ))) {
         if (   (1.6 > (fabs(currentPose_.pose.position.y))) ){
           
-          ROS_INFO("Flag set");
+          // ROS_INFO("Flag set");
           // std::cout<<flag_test_<<std::endl;
           std::cout<<fabs(currentPose_.pose.position.x)<< std::endl;
           std::cout<<fabs(currentPose_.pose.position.y)<< std::endl;
@@ -671,16 +746,30 @@ bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::S
   }
 
 
+  void HectorMappingRos::missionStatusCB (const pensa_msgs::FlightMissionPtr& msg){
+    flag_test_=false;
+
+    ROS_INFO("Go to initiation with vislam ");
+
+  }
+
   void HectorMappingRos::setpointCB (const geometry_msgs::PoseStampedPtr& msg)
   {
-    
-    current_pose_y_=(msg->pose.position.y);
+    ROS_INFO("angle >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
 
+    current_pose_y_=(msg->pose.position.y);
+    std::cout<<"current_pose_y_"<<current_pose_y_<< std::endl;
     if (fabs(current_pose_y_) > fabs(previous_pose_y_)){
-      angle_y_= angle_y_;
+      // angle_y_= angle_y_;
+      ROS_INFO("angle did not change ");
+
     }
     else if(fabs(current_pose_y_) < fabs(previous_pose_y_)){
-      angle_y_ = -1 * angle_y_;
+      // angle_y_ = -1 * angle_y_;
+      ROS_INFO("angle did  change ");
+            landing_flag =true;
+
+
     }
     
 

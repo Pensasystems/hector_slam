@@ -39,6 +39,9 @@
 #include "sensor_msgs/LaserScan.h"
 #include <std_msgs/String.h>
 
+#include <pensa_msgs/SetString.h>
+#include <pensa_msgs/FlightMission.h>
+
 #include "laser_geometry/laser_geometry.h"
 #include "nav_msgs/GetMap.h"
 #include "nav_msgs/Odometry.h"
@@ -98,6 +101,7 @@ public:
   void mavrosPoseCB(const geometry_msgs::PoseStampedConstPtr& msg);
   void vislamOdomCB (const nav_msgs::OdometryPtr& msg);
   void setpointCB (const geometry_msgs::PoseStampedPtr& msg);
+  void missionStatusCB (const pensa_msgs::FlightMissionPtr& msg);
 
   //
   //void vislamControl(bool pauseVislam);
@@ -136,6 +140,7 @@ protected:
   ros:: Subscriber vislamOdomSub_;
 
   ros:: Subscriber setpointSub_;
+  ros:: Subscriber missionStatusSub_;
 
 
   ros::ServiceServer pauseServiceServer_;
@@ -213,6 +218,8 @@ protected:
   bool p_advertise_map_service_;
   bool forward_way_;
   bool flag_test_;
+  bool landing_flag;
+
   int p_scan_subscriber_queue_size_;
 
   double p_update_factor_free_;
