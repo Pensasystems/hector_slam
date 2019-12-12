@@ -60,7 +60,7 @@ HectorMappingRos::HectorMappingRos()
   ,xend_(0)
   ,current_pose_y_(0)
   ,previous_pose_y_(0)
-  ,angle_y_(0.0872665)
+  ,angle_y_(0.0)
   ,residual_x_(0)
   ,residual_y_(0)
   // ,vislamControl(false)
@@ -142,8 +142,8 @@ HectorMappingRos::HectorMappingRos()
 
   missionStatusSub_=node_.subscribe("/drone_arbiter/mission",1,&HectorMappingRos::missionStatusCB, this);
 
-  mavrosPublisher_ = node_.advertise<nav_msgs::Odometry>("mavros/test", 50);
-  poseEkfPublisher_ = node_.advertise<geometry_msgs::PoseStamped>("ekf/pose", 50);
+  mavrosPublisher_ = node_.advertise<nav_msgs::Odometry>("/test", 1);
+  poseEkfPublisher_ = node_.advertise<geometry_msgs::PoseStamped>("ekf/pose", 1);
   // pauseServiceClient_ = node_.serviceClient<std_srvs::SetBool>("vilamwithCov_pause");	
 
 
