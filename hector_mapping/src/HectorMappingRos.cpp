@@ -58,6 +58,7 @@ HectorMappingRos::HectorMappingRos()
   , map__publish_thread_(0)
   ,yend_(0)
   ,xend_(0)
+  ,begin_vislam(0)
   ,current_pose_y_(0)
   ,previous_pose_y_(0)
   ,angle_y_(0.0)
@@ -134,7 +135,7 @@ HectorMappingRos::HectorMappingRos()
 
   pauseServiceServer_ = node_.advertiseService("pause", &HectorMappingRos::pauseCallback, this);
 
-  mavrosPoseSub_ = node_.subscribe("/mavros/local_position/pose", 1,&HectorMappingRos::mavrosPoseCB, this);
+  mavrosPoseSub_ = node_.subscribe("/local_pose_repub/local_pose", 1,&HectorMappingRos::mavrosPoseCB, this);
 
   vislamOdomSub_ = node_.subscribe("/vislam/odometry", 1,&HectorMappingRos::vislamOdomCB, this);
 
@@ -291,19 +292,19 @@ void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
     ekfPose_.pose.orientation.y=vislamOdom_.pose.pose.orientation.y;
     ekfPose_.pose.orientation.z=vislamOdom_.pose.pose.orientation.z;
     ekfPose_.pose.orientation.w=vislamOdom_.pose.pose.orientation.w;
-      std::cout<< "update last msg"<<std::endl;
+      // std::cout<< "update last msg"<<std::endl;
 
-      std::cout<< "lastOdomMsgYaw_.pose.pose.position.x"<<std::endl;
-      std::cout<< lastOdomMsgYaw_.pose.pose.position.x<<std::endl;
+      // std::cout<< "lastOdomMsgYaw_.pose.pose.position.x"<<std::endl;
+      // std::cout<< lastOdomMsgYaw_.pose.pose.position.x<<std::endl;
 
-      std::cout<< "lastOdomMsgYaw_.pose.pose.position.y"<<std::endl;
+      // std::cout<< "lastOdomMsgYaw_.pose.pose.position.y"<<std::endl;
 
-      std::cout<< lastOdomMsgYaw_.pose.pose.position.y<<std::endl;
+      // std::cout<< lastOdomMsgYaw_.pose.pose.position.y<<std::endl;
 
 
 
-      std::cout<< residual_x_<<std::endl;
-      std::cout<< residual_y_<<std::endl;
+      // std::cout<< residual_x_<<std::endl;
+      // std::cout<< residual_y_<<std::endl;
       yend_=lastOdomMsgYaw_.pose.pose.position.y;
       xend_=lastOdomMsgYaw_.pose.pose.position.x;
     }
@@ -360,6 +361,11 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     initial_pose_ = Eigen::Vector3f(currentPose_.pose.position.x, currentPose_.pose.position.y,yaw_new_);
     initial_pose_set_ = true;
     ROS_INFO(" I am initiated");
+
+    
+
+
+
     nav_msgs::Odometry lastOdomMsgYaw_;
     if (!flag_test_){
       lastOdomMsgYaw_.pose.pose.position.x = vislamOdom_.pose.pose.position.x;
@@ -542,8 +548,8 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 	      // lastOdomMsg_ = tmp;
       // }
 
-      std::cout<<  tmp.pose.pose.position.x<<std::endl;
-      std::cout<<  tmp.pose.pose.position.y<<std::endl;
+      // std::cout<<  tmp.pose.pose.position.x<<std::endl;
+      // std::cout<<  tmp.pose.pose.position.y<<std::endl;
       
       flag_test_=true;
       odometryPublisher_.publish(tmp);
@@ -730,8 +736,8 @@ bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::S
           
           // ROS_INFO("Flag set");
           // std::cout<<flag_test_<<std::endl;
-          std::cout<<fabs(currentPose_.pose.position.x)<< std::endl;
-          std::cout<<fabs(currentPose_.pose.position.y)<< std::endl;
+          // std::cout<<fabs(currentPose_.pose.position.x)<< std::endl;
+          // std::cout<<fabs(currentPose_.pose.position.y)<< std::endl;
 
 
 
@@ -786,6 +792,17 @@ bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::S
   void HectorMappingRos::vislamOdomCB (const nav_msgs::OdometryPtr& msg)
   {
 
+    // std::cout<<  begin_vislam.toSec() <<std::endl;
+    
+    double duration = (ros::Time::now() - begin_vislam).toSec();
+    // std::cout<<  duration <<std::endl;
+    if (duration > 5){
+      flag_test_=false;
+      nodePaused_=true;
+      std::cout<<  duration <<std::endl;
+    }
+    begin_vislam = ros::Time::now();
+    
     // residual_x_=(msg->pose.pose.position.x)-vislamOdom_.pose.pose.position.x;
     // residual_y_=(msg->pose.pose.position.y)-vislamOdom_.pose.pose.position.y;
     vislamOdom_= *msg;
