@@ -57,6 +57,8 @@
 
 #include <std_srvs/SetBool.h>
 
+#include <tf2_ros/buffer.h>
+
 class HectorDrawings;
 class HectorDebugInfoProvider;
 
@@ -99,7 +101,7 @@ public:
   void staticMapCallback(const nav_msgs::OccupancyGrid& map);
   void initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
   void mavrosPoseCB(const geometry_msgs::PoseStampedConstPtr& msg);
-  void vislamOdomCB (const nav_msgs::OdometryPtr& msg);
+  void vislamOdomCB (const geometry_msgs::PoseStampedConstPtr& msg);
   void setpointCB (const geometry_msgs::PoseStampedPtr& msg);
   void missionStatusCB (const pensa_msgs::FlightMissionPtr& msg);
 
@@ -160,6 +162,8 @@ protected:
 
   tf::Transform map_to_odom_;
 
+  // tf2_ros::Buffer& tf_; //transform to store frame
+
   boost::thread* map__publish_thread_;
 
   hectorslam::HectorSlamProcessor* slamProcessor;
@@ -183,7 +187,7 @@ protected:
   nav_msgs::Odometry twolastOdomMsg_;	
   geometry_msgs::PoseStamped ekfPose_;
   geometry_msgs::PoseStamped currentPose_;
-  nav_msgs::Odometry vislamOdom_;
+  geometry_msgs::PoseStamped vislamOdom_;
   double yaw_new_;
   double residual_x_;
   double residual_y_;
