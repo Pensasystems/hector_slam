@@ -332,7 +332,7 @@ void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
 	  // lastScanMatchTf_.stamp_ = ros::Time::now();
 	  // lastMapToOdomTf_.stamp_ = ros::Time::now();
     odometryPublisher_.publish(lastOdomMsgYaw_);
-    ROS_INFO(" stop...............................................");
+    ROS_INFO(" stop....................*************...........................");
 
 
  // }
@@ -367,12 +367,17 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 
 
     nav_msgs::Odometry lastOdomMsgYaw_;
+    lastOdomMsgYaw_.pose.pose.position.x = (vislamOdom_.pose.position.x-residual_x_)+lastOdomMsg_.pose.pose.position.x;
+    lastOdomMsgYaw_.pose.pose.position.y = (vislamOdom_.pose.position.y-residual_y_)+lastOdomMsg_.pose.pose.position.y;
+
     if (!flag_test_){
       lastOdomMsgYaw_.pose.pose.position.x = vislamOdom_.pose.position.x;
       lastOdomMsgYaw_.pose.pose.position.y = vislamOdom_.pose.position.y;
-      lastOdomMsgYaw_.pose.pose.orientation.z = vislamOdom_.pose.orientation.z;
-      lastOdomMsgYaw_.pose.pose.orientation.w = vislamOdom_.pose.orientation.w;
-      ROS_INFO(" I am initiated with vislam");
+          ROS_INFO(" I am initiated with vislam");
+
+      } 
+    lastOdomMsgYaw_.pose.pose.orientation.z = vislamOdom_.pose.orientation.z;
+    lastOdomMsgYaw_.pose.pose.orientation.w = vislamOdom_.pose.orientation.w;
     ekfPose_.header=lastOdomMsgYaw_.header;
     ekfPose_.header.frame_id = "map";
     ekfPose_.pose.position.x=lastOdomMsgYaw_.pose.pose.position.x;
@@ -403,7 +408,7 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 	  lastMapToOdomTf_.stamp_ = ros::Time::now();
 
     odometryPublisher_.publish(lastOdomMsgYaw_);
-    }
+    
     ROS_INFO(" stop...............................................");
 
 
@@ -639,13 +644,14 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     ekfPose_.pose.position.x=tmp.pose.pose.position.x;
     ekfPose_.pose.position.y=tmp.pose.pose.position.y;
     ekfPose_.pose.position.z=vislamOdom_.pose.position.z;
+    // ekfPose_.pose.position.z=currentPose_.pose.position.z;
     ekfPose_.pose.orientation.x=vislamOdom_.pose.orientation.x;
     ekfPose_.pose.orientation.y=vislamOdom_.pose.orientation.y;
     ekfPose_.pose.orientation.z=vislamOdom_.pose.orientation.z;
     ekfPose_.pose.orientation.w=vislamOdom_.pose.orientation.w;
 
   	lastOdomMsg_ = tmp;
-          std::cout<< "lasmessag is " <<lastOdomMsg_.pose.pose.position.x<< "  "<<lastOdomMsg_.pose.pose.position.x<<std::endl;
+          std::cout<< "lasmessag is " <<lastOdomMsg_.pose.pose.position.x<< "  "<<lastOdomMsg_.pose.pose.position.y<<std::endl;
 
 
 
