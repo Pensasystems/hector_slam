@@ -50,18 +50,11 @@ HectorMappingRos::HectorMappingRos()
   , lastGetMapUpdateIndex(-100)
   , nodePaused_(true)
   , positionHold_(false)
-  ,forward_way_(false)
-  ,flag_test_(false)
-  ,landing_flag(false)
-  ,yaw_new_(0)
+  ,publish_hector_as_mavros_pose(false)
+  ,current_pose_yaw_(0)
   , tfB_(0)
   , map__publish_thread_(0)
-  ,yend_(0)
-  ,xend_(0)
-  ,begin_vislam(0)
-  ,current_pose_y_(0)
-  ,previous_pose_y_(0)
-  ,angle_y_(0.0)
+  ,begin_vislam_(0)
   ,residual_x_(0)
   ,residual_y_(0)
   // ,vislamControl(false)
@@ -128,8 +121,6 @@ HectorMappingRos::HectorMappingRos()
     hectorDrawings = new HectorDrawings();
   }
 
-  // holdServiceServer_ = node_.advertiseService("position_hold", &HectorMappingRos::holdCallback, this);
-  // pauseServiceServer_ = node_.advertiseService("pause", &HectorMappingRos::pauseCallback, this);
 
   holdServiceServer_ = node_.advertiseService("position_hold", &HectorMappingRos::holdCallback, this);
 
@@ -138,8 +129,6 @@ HectorMappingRos::HectorMappingRos()
   mavrosPoseSub_ = node_.subscribe("/local_pose_repub/local_pose", 1,&HectorMappingRos::mavrosPoseCB, this);
 
   vislamOdomSub_ = node_.subscribe("/vislam/vision_pose/pose", 1,&HectorMappingRos::vislamOdomCB, this);
-
-  setpointSub_ = node_.subscribe("/mavros/setpoint_position/local", 1,&HectorMappingRos::setpointCB, this);
 
   missionStatusSub_=node_.subscribe("/drone_arbiter/mission",1,&HectorMappingRos::missionStatusCB, this);
 
@@ -157,7 +146,7 @@ HectorMappingRos::HectorMappingRos()
 
   if(p_pub_odometry_)
   {
-    odometryPublisher_ = node_.advertise<nav_msgs::Odometry>("posewithcov", 50);
+    odometryPublisher_ = node_.advertise<nav_msgs::Odometry>("scanmatch_odom", 50);
   }
 
   slamProcessor = new hectorslam::HectorSlamProcessor(static_cast<float>(p_map_resolution_), p_map_size_, p_map_size_, Eigen::Vector2f(p_map_start_x_, p_map_start_y_), p_map_multi_res_levels_, hectorDrawings, debugInfoProvider);
@@ -234,7 +223,7 @@ HectorMappingRos::HectorMappingRos()
   }
   */
 
-  initial_pose_sub_ = new message_filters::Subscriber<geometry_msgs::PoseStamped>(node_, "initialpose", 2);
+  initial_pose_sub_ = new message_filters::Subscriber<geometry_msgs::PoseStamped>(node_, "initial_pose", 2);
   initial_pose_filter_ = new tf::MessageFilter<geometry_msgs::PoseStamped>(*initial_pose_sub_, tf_, p_map_frame_, 2);
   initial_pose_filter_->registerCallback(boost::bind(&HectorMappingRos::initialPoseCallback, this, _1));
 
@@ -242,14 +231,6 @@ HectorMappingRos::HectorMappingRos()
   map__publish_thread_ = new boost::thread(boost::bind(&HectorMappingRos::publishMapLoop, this, p_map_pub_period_));
 
   map_to_odom_.setIdentity();
-
-  lastMapPublishTime = ros::Time(0,0);
-
-  positionHoldTimer_ = private_nh_.createTimer(ros::Duration(0.2),
-											   &HectorMappingRos::publishHeldPosition,
-											   this,
-											   false,
-											   false);
 }
 
 HectorMappingRos::~HectorMappingRos()
@@ -269,79 +250,10 @@ HectorMappingRos::~HectorMappingRos()
     delete map__publish_thread_;
 }
 
-void HectorMappingRos::publishHeldPosition(const ros::TimerEvent& e)
-{
-  ROS_INFO(" stop.............................................Start");
-  //if (nodePaused_){
-	  // lastOdomMsgYaw_.header.stamp = ros::Time::now();
-	  // lastScanMatchTf_.stamp_ = ros::Time::now();
-	  // lastMapToOdomTf_.stamp_ = ros::Time::now();
-	  // odometryPublisher_.publish(lastOdomMsg_);
-	  // tfB_->sendTransform( lastScanMatchTf_);
-	  // tfB_->sendTransform( lastMapToOdomTf_ );
-    // if (nodePaused_ || positionHold_) {
-    //   lastOdomMsgYaw_.pose.pose.position.x = (vislamOdom_.pose.position.x-residual_x_)+lastOdomMsg_.pose.pose.position.x;
-    //   lastOdomMsgYaw_.pose.pose.position.y = (vislamOdom_.pose.position.y-residual_y_)+lastOdomMsg_.pose.pose.position.y;
-
-    // ekfPose_.header=lastOdomMsgYaw_.header;
-    // ekfPose_.header.frame_id = "map";
-    // ekfPose_.pose.position.x=lastOdomMsgYaw_.pose.pose.position.x;
-    // ekfPose_.pose.position.y=lastOdomMsgYaw_.pose.pose.position.y;
-    // ekfPose_.pose.position.z=vislamOdom_.pose.position.z;
-    // ekfPose_.pose.orientation.x=vislamOdom_.pose.orientation.x;
-    // ekfPose_.pose.orientation.y=vislamOdom_.pose.orientation.y;
-    // ekfPose_.pose.orientation.z=vislamOdom_.pose.orientation.z;
-    // ekfPose_.pose.orientation.w=vislamOdom_.pose.orientation.w;
-    //   // std::cout<< "update last msg"<<std::endl;
-
-    //   // std::cout<< "lastOdomMsgYaw_.pose.pose.position.x"<<std::endl;
-    //   // std::cout<< lastOdomMsgYaw_.pose.pose.position.x<<std::endl;
-
-    //   // std::cout<< "lastOdomMsgYaw_.pose.pose.position.y"<<std::endl;
-
-    //   // std::cout<< lastOdomMsgYaw_.pose.pose.position.y<<std::endl;
-
-
-
-    //   // std::cout<< residual_x_<<std::endl;
-    //   // std::cout<< residual_y_<<std::endl;
-    //   // yend_=lastOdomMsgYaw_.pose.pose.position.y;
-    //   // xend_=lastOdomMsgYaw_.pose.pose.position.x;
-    // }
-
-    // lastOdomMsg_.pose.pose.position.x = currentPose_.pose.position.x;
-	  // lastOdomMsg_.pose.pose.position.y = currentPose_.pose.position.y;
-    // lastOdomMsg_.pose.pose.orientation.z = currentPose_.pose.orientation.z;
-    // lastOdomMsg_.pose.pose.orientation.w = currentPose_.pose.orientation.w;
-    // lastOdomMsg_.pose.covariance [0] = .000003;
-    // lastOdomMsg_.pose.covariance[7] =  .000001;
-    // lastOdomMsg_.pose.covariance[14] = .0000032;
-    // lastOdomMsg_.pose.covariance[21] = .000002;
-    // lastOdomMsg_.pose.covariance[28] = .0000014;
-    // lastOdomMsg_.pose.covariance[35] = .0000021;
-
-    // lastOdomMsgYaw_.pose.covariance [0] = vislamOdom_.pose.covariance [0];
-    // lastOdomMsgYaw_.pose.covariance [7] =  vislamOdom_.pose.covariance [7];
-    // lastOdomMsgYaw_.pose.covariance [14] = vislamOdom_.pose.covariance [14];
-    // lastOdomMsgYaw_.pose.covariance [21] = vislamOdom_.pose.covariance [21];
-    // lastOdomMsgYaw_.pose.covariance [28] = vislamOdom_.pose.covariance [28];
-    // lastOdomMsgYaw_.pose.covariance [35] = vislamOdom_.pose.covariance [35];
-    // lastOdomMsgYaw_.child_frame_id = p_base_frame_;
-    // lastOdomMsgYaw_.header.frame_id= p_map_frame_;
-    // // lastOdomMsg_.header.stamp = ros::Time::now();
-	  // // lastScanMatchTf_.stamp_ = ros::Time::now();
-	  // // lastMapToOdomTf_.stamp_ = ros::Time::now();
-    // odometryPublisher_.publish(lastOdomMsgYaw_);
-    // ROS_INFO(" stop....................*************...........................");
-
-
- // }
-}
 
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 {
   if (nodePaused_ || positionHold_) {
-    // vislamControl(true); 
       double qx=0;
       double qy=0;
       double qz=0;
@@ -350,30 +262,21 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
       qy= currentPose_.pose.orientation.y;
       qz= currentPose_.pose.orientation.z;
       qw= currentPose_.pose.orientation.w;
-      
-    // initial_pose_.pose.position.x=currentPose_.pose.position.x;
-    //initial_pose_.pose.position.y=currentPose_.pose.position.x;
         double siny_cosp = 2 * (qw * qz + qx * qy);
        double cosy_cosp = 1 - 2 * (qy * qy + qz * qz);
-       //double yaw_new_ = std::atan2(siny_cosp, cosy_cosp);
-       //double yaw_new=tf::getYaw(getRotation(qx,qy,qz,qw));
        
-    initial_pose_ = Eigen::Vector3f(currentPose_.pose.position.x, currentPose_.pose.position.y,yaw_new_);
+    initial_pose_ = Eigen::Vector3f(currentPose_.pose.position.x, currentPose_.pose.position.y,current_pose_yaw_);
     initial_pose_set_ = true;
-    ROS_INFO(" I am initiated");
+    ROS_DEBUG(" Hector initiated");
 
-    
-
-
-
-    nav_msgs::Odometry lastOdomMsgYaw_;
+    nav_msgs::Odometry lastOdomMsgYaw_; // Last Msg the held before reseting the map
     lastOdomMsgYaw_.pose.pose.position.x = (vislamOdom_.pose.position.x-residual_x_)+lastOdomMsg_.pose.pose.position.x;
     lastOdomMsgYaw_.pose.pose.position.y = (vislamOdom_.pose.position.y-residual_y_)+lastOdomMsg_.pose.pose.position.y;
 
-    if (!flag_test_){
+    if (!publish_hector_as_mavros_pose){
       lastOdomMsgYaw_.pose.pose.position.x = vislamOdom_.pose.position.x;
       lastOdomMsgYaw_.pose.pose.position.y = vislamOdom_.pose.position.y;
-          ROS_INFO(" I am initiated with vislam");
+          ROS_DEBUG(" Hector initiated with vislam");
 
       } 
     lastOdomMsgYaw_.pose.pose.orientation.z = vislamOdom_.pose.orientation.z;
@@ -387,34 +290,21 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     ekfPose_.pose.orientation.y=vislamOdom_.pose.orientation.y;
     ekfPose_.pose.orientation.z=vislamOdom_.pose.orientation.z;
     ekfPose_.pose.orientation.w=vislamOdom_.pose.orientation.w;
-   
-    // else if (flag_test_){
-    //   lastOdomMsg_.pose.pose.position.x = currentPose_.pose.position.x;
-    //   lastOdomMsg_.pose.pose.position.y = currentPose_.pose.position.y;
-    //   lastOdomMsg_.pose.pose.orientation.z = currentPose_.pose.orientation.z;
-    //   lastOdomMsg_.pose.pose.orientation.w = currentPose_.pose.orientation.w;
-    //   ROS_INFO(" I am initiated with Mavros");
-    // }
-    // lastOdomMsgYaw_.pose.covariance [0] = vislamOdom_.pose.covariance [0];
-    // lastOdomMsgYaw_.pose.covariance [7] =  vislamOdom_.pose.covariance [7];
-    // lastOdomMsgYaw_.pose.covariance [14] = vislamOdom_.pose.covariance [14];
-    // lastOdomMsgYaw_.pose.covariance [21] = vislamOdom_.pose.covariance [21];
-    // lastOdomMsgYaw_.pose.covariance [28] = vislamOdom_.pose.covariance [28];
-    // lastOdomMsgYaw_.pose.covariance [35] = vislamOdom_.pose.covariance [35];
     lastOdomMsgYaw_.child_frame_id = p_base_frame_;
     lastOdomMsgYaw_.header.frame_id= p_map_frame_;
-    lastOdomMsgYaw_.header.stamp = ros::Time::now();
-	  lastScanMatchTf_.stamp_ = ros::Time::now();
-	  lastMapToOdomTf_.stamp_ = ros::Time::now();
+    ros::Time now =ros::Time::now();
+    lastOdomMsgYaw_.header.stamp = now;
+	  lastScanMatchTf_.stamp_ = now;
+	  lastMapToOdomTf_.stamp_ = now;
 
     odometryPublisher_.publish(lastOdomMsgYaw_);
     
-    ROS_INFO(" stop...............................................");
+    
 
 
     return;
   }
-	
+
   if (hectorDrawings)
   {
     hectorDrawings->setTime(scan.header.stamp);
@@ -511,8 +401,6 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
   {
     nav_msgs::Odometry tmp;
     tmp.pose = poseInfoContainer_.getPoseWithCovarianceStamped().pose;
-    // tmp.pose.pose.position.x=(((tmp.pose.pose.position.x))*cos(angle_y_))-(((tmp.pose.pose.position.y)-(yend_))*sin(angle_y_));
-    // tmp.pose.pose.position.y=(((tmp.pose.pose.position.x)-(xend_))*sin(angle_y_))+(((tmp.pose.pose.position.y))*cos(angle_y_));
     tmp.header = poseInfoContainer_.getPoseWithCovarianceStamped().header;
     tmp.child_frame_id = p_base_frame_;
         for(int16_t i=0;i<6;i++){
@@ -520,145 +408,22 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
               tmp.pose.covariance[ i*6 + j ] =  0.0000001*tmp.pose.covariance[ i*6 + j ];
         }
     }
-    ROS_INFO("Before condition");
-    //Ros_INFO(currentPose_.pose.position.x);
-    //std::cout<<fabs(currentPose_.pose.position.x)<< std::endl;
-    //std::cout<<fabs(currentPose_.pose.position.y)<< std::endl;
-
-
-    //if ( (1.5 < (fabs(currentPose_.pose.position.y))) || (flag_test_)) {
-      //flag_test_==true;
-      //ROS_INFO("1.5 < (fabs(currentPose_.pose.position.x)) |  1.5 < (fabs(currentPose_.pose.position.x))");
-      // if ( 2.05 > (fabs(currentPose_.pose.position.x)) ||  2.05 > (fabs(currentPose_.pose.position.y))){
-      //   ROS_INFO("( 2.05 > (fabs(currentPose_.pose.position.x)) |  2.05 > (fabs(currentPose_.pose.position.x)))");
-        /// check fo x
-        // if ((fabs(lastOdomMsg_.pose.pose.position.x-tmp.pose.pose.position.x)) > 0.10 ){
-          
-        //   tmp.pose.pose.position.x = lastOdomMsg_.pose.pose.position.x+(tanh((lastOdomMsg_.pose.pose.position.x-tmp.pose.pose.position.x)))*0.05;
-        // }
-        // else
-        // {
-        //   tmp.pose.pose.position.x=tmp.pose.pose.position.x;
-        // }//end check for x
-        // // ///check for y
-        // if ((fabs(lastOdomMsg_.pose.pose.position.y-tmp.pose.pose.position.y)) > 0.10) {
-          
-        //   tmp.pose.pose.position.y = lastOdomMsg_.pose.pose.position.x + (tanh((lastOdomMsg_.pose.pose.position.y-tmp.pose.pose.position.y)))*0.05;
-        // }
-        // else
-        // {
-        //   tmp.pose.pose.position.y=tmp.pose.pose.position.y;
-        // }//end check for y
-        // odometryPublisher_.publish(tmp);
-	      // lastOdomMsg_ = tmp;
-      // }
-
-      // std::cout<<  tmp.pose.pose.position.x<<std::endl;
-      // std::cout<<  tmp.pose.pose.position.y<<std::endl;
       
-      flag_test_=true;
+      publish_hector_as_mavros_pose = true;
       odometryPublisher_.publish(tmp);
       residual_x_=  vislamOdom_.pose.position.x;
       residual_y_=  vislamOdom_.pose.position.y;
-      ///pause
-      //vislamControl(false);
-      //forward_way_(false);
-    //   if ( 2.1< (fabs(currentPose_.pose.position.x)) ||  2.1 < (fabs(currentPose_.pose.position.y)) ) {
-    //     // forward_way_=true;
-    //     //flag_test_==false;
-    //     vislamControl(false);
 
-    // }
-    // }
-    if ( fabs(vislamOdom_.pose.position.y) > 2.30) {
-      std::cout<<  fabs(vislamOdom_.pose.position.y)<<std::endl;
-      ROS_INFO("settesd flag");
-
-       }
-     
-
-    //  if (landing_flag){
-    //        tmp.pose.pose.position.x=(((tmp.pose.pose.position.x))*cos(angle_y_))-(((tmp.pose.pose.position.y)-(yend_))*sin(angle_y_));
-    //        tmp.pose.pose.position.y=(((tmp.pose.pose.position.x)-(xend_))*sin(angle_y_))+(((tmp.pose.pose.position.y))*cos(angle_y_));
-    //        ROS_INFO("settesd landing and angle ...................................");
-
-    //  }
-
-
-    // else if (forward_way_){
-    //   //vislamControl(true);
-    //   ROS_INFO("condition is set");
-
-    // }
-    // odometryPublisher_.publish(tmp);
-	  // lastOdomMsg_ = tmp;
     ekfPose_.header=tmp.header;
-    // ekfPose_.pose.position.x=tmp.pose.pose.position.x;
-    // ekfPose_.pose.position.y=tmp.pose.pose.position.y;
-      //   if ((landing_flag) && (fabs(vislamOdom_.pose.pose.position.y)) < 1.5){
-      // //  tmp.pose.pose.position.x=vislamOdom_.pose.pose.position.x;
-      // //  tmp.pose.pose.position.y=vislamOdom_.pose.pose.position.y;
-      //     // tmp.pose.pose.position.x=(((tmp.pose.pose.position.x))*cos(angle_y_))-(((tmp.pose.pose.position.y)-(yend_))*sin(angle_y_));
-      //     // tmp.pose.pose.position.y=(((tmp.pose.pose.position.x)-(xend_))*sin(angle_y_))+(((tmp.pose.pose.position.y))*cos(angle_y_));
-
-      //   if ((fabs(lastOdomMsg_.pose.pose.position.x-vislamOdom_.pose.pose.position.x)) > 0.02 ){
-
-      //       if ((lastOdomMsg_.pose.pose.position.x)>(vislamOdom_.pose.pose.position.x)){
-          
-      //       tmp.pose.pose.position.x = lastOdomMsg_.pose.pose.position.x-0.02;
-      //       }
-      //       if ((lastOdomMsg_.pose.pose.position.x)<(vislamOdom_.pose.pose.position.x)){
-          
-      //       tmp.pose.pose.position.x = lastOdomMsg_.pose.pose.position.x+0.02;
-      //       }
-
-      //       ROS_INFO("Changed to vislam in the loop");
-
-      //   }
-      //   else
-      //   {
-      //        tmp.pose.pose.position.x=vislamOdom_.pose.pose.position.x;
-      //                    ROS_INFO("Changed to vislam out the loop");
-
-      //   }//end check for x
-      //   // ///check for y
-      //   // if ((fabs(lastOdomMsg_.pose.pose.position.y-vislamOdom_.pose.pose.position.y)) > 0.02 ){
-
-      //   //     if ((lastOdomMsg_.pose.pose.position.y)>(vislamOdom_.pose.pose.position.y)){
-          
-      //   //     tmp.pose.pose.position.y = lastOdomMsg_.pose.pose.position.y-0.02;
-      //   //     }
-      //   //     if ((lastOdomMsg_.pose.pose.position.y)<(vislamOdom_.pose.pose.position.y)){
-          
-      //   //     tmp.pose.pose.position.y = lastOdomMsg_.pose.pose.position.y+0.02;
-      //   //     }          
-      //   // }
-      //   // else
-      //   // {
-      //   //   tmp.pose.pose.position.y=vislamOdom_.pose.pose.position.y;
-      //   // }//end check for y
-      //   flag_test_=false;
-
-      //  ROS_INFO("Changed to vislam");
-      //   }
     ekfPose_.pose.position.x=tmp.pose.pose.position.x;
     ekfPose_.pose.position.y=tmp.pose.pose.position.y;
     ekfPose_.pose.position.z=vislamOdom_.pose.position.z;
-    // ekfPose_.pose.position.z=currentPose_.pose.position.z;
     ekfPose_.pose.orientation.x=vislamOdom_.pose.orientation.x;
     ekfPose_.pose.orientation.y=vislamOdom_.pose.orientation.y;
     ekfPose_.pose.orientation.z=vislamOdom_.pose.orientation.z;
     ekfPose_.pose.orientation.w=vislamOdom_.pose.orientation.w;
 
-  	lastOdomMsg_ = tmp;
-          std::cout<< "lasmessag is " <<lastOdomMsg_.pose.pose.position.x<< "  "<<lastOdomMsg_.pose.pose.position.y<<std::endl;
-
-
-
-
-    // poseEkfPublisher_.publish(ekfPose_);
-
-
+    lastOdomMsg_ = tmp;
   }
 
   if (p_pub_map_odom_transform_)
@@ -689,7 +454,7 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 void HectorMappingRos::sysMsgCallback(const std_msgs::String& string)
 {
 
-  std::cout<<"try to reset"<<std::endl;
+  ROS_DEBUG("try to reset");
   ROS_INFO("HectorSM sysMsgCallback, msg contents: %s", string.data.c_str());
 
   if (string.data == "reset")
@@ -701,153 +466,68 @@ void HectorMappingRos::sysMsgCallback(const std_msgs::String& string)
 
 bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp)
 {
-	// Perhaps easier to do this from the user side. And there might be a case where we want this behavior.
-	//if (nodePaused_)
-	//{
-	//	rsp.success = false;
-	//	return false;
-	//}
-	
-	if (positionHold_ != req.data)
-	{
-		positionHold_ = req.data;
-		rsp.success = true;
+  if (positionHold_ != req.data)
+  {
+    positionHold_ = req.data;
+    rsp.success = true;
 
-		if (positionHold_)
-		{
-			positionHoldTimer_.setPeriod(ros::Duration(0.2), true);
-			positionHoldTimer_.start();
-		}
-		else
-		{
-			positionHoldTimer_.stop();
-		}
-	}
-	return true;
+    if (positionHold_)
+    {
+      positionHoldTimer_.setPeriod(ros::Duration(0.2), true);
+      positionHoldTimer_.start();
+    }
+    else
+    {
+      positionHoldTimer_.stop();
+    }
+  }
+  return true;
 }
     
-
-
-
   void HectorMappingRos::mavrosPoseCB (const geometry_msgs::PoseStampedConstPtr& msg)
   {
     currentPose_= *msg;
     currentPose_.header.stamp = ros::Time::now();
-	  // currentPose_.stamp_ = ros::Time::now();
-	  // currentPose_.stamp_ = ros::Time::now();
-      //ROS_INFO("........");
-
-      if (  (1.4 <= (fabs(currentPose_.pose.position.y) ))) {
-        if (   (1.6 > (fabs(currentPose_.pose.position.y))) ){
-          
-          // ROS_INFO("Flag set");
-          // std::cout<<flag_test_<<std::endl;
-          // std::cout<<fabs(currentPose_.pose.position.x)<< std::endl;
-          // std::cout<<fabs(currentPose_.pose.position.y)<< std::endl;
-
-
-
-
-        }
-        
-      }
-
     tf::Pose pose;
     tf::poseMsgToTF(msg->pose, pose);
-    yaw_new_=tf::getYaw(pose.getRotation());
+    current_pose_yaw_=tf::getYaw(pose.getRotation());
   }
 
 
   void HectorMappingRos::missionStatusCB (const pensa_msgs::FlightMissionPtr& msg){
-    flag_test_=false;
+    publish_hector_as_mavros_pose = false;
 
     ROS_INFO("Go to initiation with vislam ");
 
   }
 
-  void HectorMappingRos::setpointCB (const geometry_msgs::PoseStampedPtr& msg)
-  {
-    ROS_INFO("angle >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ");
-
-    current_pose_y_=(msg->pose.position.y);
-    std::cout<<"current_pose_y_"<<current_pose_y_<< std::endl;
-    if (fabs(current_pose_y_) > fabs(previous_pose_y_)){
-      // angle_y_= angle_y_;
-      ROS_INFO("angle did not change ");
-
-    }
-    else if(fabs(current_pose_y_) < fabs(previous_pose_y_)){
-      // angle_y_ = -1 * angle_y_;
-      ROS_INFO("angle did  change ");
-            landing_flag =true;
-
-
-    }
-    
-
-    previous_pose_y_=current_pose_y_;
-
-
-
-  
-
-  
-        
-  }
-
   void HectorMappingRos::vislamOdomCB (const geometry_msgs::PoseStampedConstPtr& msg)
   {
-
-    // std::cout<<  begin_vislam.toSec() <<std::endl;
-    
-    double duration = (ros::Time::now() - begin_vislam).toSec();
-    // std::cout<<  duration <<std::endl;
+    double duration = (ros::Time::now() - begin_vislam_).toSec();
     if (duration > 5){
-      flag_test_=false;
+      publish_hector_as_mavros_pose = false;
       nodePaused_=true;
       slamProcessor->reset();
       std::cout<<  duration <<std::endl;
     }
-    begin_vislam = ros::Time::now();
-    
-    // residual_x_=(msg->pose.pose.position.x)-vislamOdom_.pose.pose.position.x;
-    // residual_y_=(msg->pose.pose.position.y)-vislamOdom_.pose.pose.position.y;
+    begin_vislam_ = ros::Time::now();
     vislamOdom_= *msg;
-    vislamOdom_.header.stamp = ros::Time::now();
-
-	  // currentPose_.stamp_ = ros::Time::now();
-	  // currentPose_.stamp_ = ros::Time::now();
     ekfPose_.header.stamp=ros::Time::now();
     poseEkfPublisher_.publish(ekfPose_);
-      //ROS_INFO("........");
-
-    //  mavrosPublisher_.publish(vislamOdom_);  
-        
   }
-
-
-
-
-    // if (   (0< (fabs(currentPose_.pose.position.y))) ){
-
-    //   nodePaused_ = false;
-    // }
-
   
-
 bool HectorMappingRos::pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp)
 {
-	if (nodePaused_ != req.data)
-	{
-		nodePaused_ = req.data;
-		//if (nodePaused_) slamProcessor->reset();
-		rsp.success = true;
-	}
+  if (nodePaused_ != req.data)
+  {
+    nodePaused_ = req.data;
+    rsp.success = true;
+  }
 
   if (nodePaused_){
     slamProcessor->reset();
   }
-	return true;
+  return true;
 }
 
 bool HectorMappingRos::mapCallback(nav_msgs::GetMap::Request  &req,
@@ -1004,17 +684,7 @@ void HectorMappingRos::setStaticMapData(const nav_msgs::OccupancyGrid& map)
   slamProcessor = new hectorslam::HectorSlamProcessor(cell_length, map_size_x, map_size_y, Eigen::Vector2f(0.0f, 0.0f), 1, hectorDrawings, debugInfoProvider);
 }
 */
-// void HectorMappingRos::vislamControl(bool pauseVislam)
-// {
 
-// 	std_srvs::SetBool msg;
-// 	msg.request.data = pauseVislam;
-// 	std::string output = "Hector SM: position hold " + std::string(msg.request.data ? "start" : "end");
-// 	if (!pauseServiceClient_.call(msg)) ROS_ERROR_STREAM(output.c_str() << " error");
-// 	else ROS_DEBUG_STREAM(output);
-
-
-// }
 
 void HectorMappingRos::publishMapLoop(double map_pub_period)
 {

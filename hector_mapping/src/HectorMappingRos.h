@@ -57,7 +57,6 @@
 
 #include <std_srvs/SetBool.h>
 
-#include <tf2_ros/buffer.h>
 
 class HectorDrawings;
 class HectorDebugInfoProvider;
@@ -85,8 +84,8 @@ public:
 
   void publishMap(MapPublisherContainer& map_, const hectorslam::GridMap& gridMap, ros::Time timestamp, MapLockerInterface* mapMutex = 0);
 
-  bool holdCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp);
-  bool pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp);
+  bool holdCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp); // service call for holding the position on height/yaw changing
+  bool pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp); //service call for reseting/stopping the map
 	
   bool rosLaserScanToDataContainer(const sensor_msgs::LaserScan& scan, hectorslam::DataContainer& dataContainer, float scaleToMap);
   bool rosPointCloudToDataContainer(const sensor_msgs::PointCloud& pointCloud, const tf::StampedTransform& laserTransform, hectorslam::DataContainer& dataContainer, float scaleToMap);
@@ -96,13 +95,11 @@ public:
   void publishTransformLoop(double p_transform_pub_period_);
   void publishMapLoop(double p_map_pub_period_);
   void publishTransform();
-  void publishHeldPosition(const ros::TimerEvent& e);
 	
   void staticMapCallback(const nav_msgs::OccupancyGrid& map);
   void initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
   void mavrosPoseCB(const geometry_msgs::PoseStampedConstPtr& msg);
   void vislamOdomCB (const geometry_msgs::PoseStampedConstPtr& msg);
-  void setpointCB (const geometry_msgs::PoseStampedPtr& msg);
   void missionStatusCB (const pensa_msgs::FlightMissionPtr& msg);
 
   //
@@ -162,7 +159,6 @@ protected:
 
   tf::Transform map_to_odom_;
 
-  // tf2_ros::Buffer& tf_; //transform to store frame
 
   boost::thread* map__publish_thread_;
 
@@ -188,14 +184,9 @@ protected:
   geometry_msgs::PoseStamped ekfPose_;
   geometry_msgs::PoseStamped currentPose_;
   geometry_msgs::PoseStamped vislamOdom_;
-  double yaw_new_;
-  double residual_x_;
-  double residual_y_;
-  double yend_;
-  double xend_;
-  double current_pose_y_;
-  double previous_pose_y_;
-  double angle_y_;
+  double current_pose_yaw_;
+  double residual_x_; // compare the vislam/pose (x) before height changes with vislam/pose (x) during the height change and store it in this variable 
+  double residual_y_; // compare the vislam/pose (y) before height changes with vislam/pose (y) during the height change and store it in this variable 
 	
 
   //-----------------------------------------------------------
@@ -220,9 +211,7 @@ protected:
   bool p_pub_map_odom_transform_;
   bool p_pub_odometry_;
   bool p_advertise_map_service_;
-  bool forward_way_;
-  bool flag_test_;
-  bool landing_flag;
+  bool publish_hector_as_mavros_pose;
 
   int p_scan_subscriber_queue_size_;
 
@@ -249,7 +238,10 @@ protected:
   float p_sqr_laser_max_dist_;
   float p_laser_z_min_value_;
   float p_laser_z_max_value_;
-  ros::Time begin_vislam;
+  /* when the vislam/vision_pose/pose starts publishing this parametere checks if the duration between previous vislam data 
+  //with the current one is more than some seconds it will figure out it's a new mission and needs to reinitialize hector with vislam 
+  */
+  ros::Time begin_vislam_;
 };
 
 #endif
