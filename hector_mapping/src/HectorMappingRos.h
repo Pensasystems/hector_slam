@@ -232,6 +232,7 @@ protected:
   bool p_use_tf_pose_start_estimate_;
   bool p_map_with_known_poses_;
   bool p_timing_output_;
+  bool check_laser_scan_; //it check laser/scan data and if it's not publishing the drone would nottake off. 
 
 
   float p_sqr_laser_min_dist_;
