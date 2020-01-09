@@ -243,6 +243,7 @@ protected:
   //with the current one is more than some seconds it will figure out it's a new mission and needs to reinitialize hector with vislam 
   */
   ros::Time begin_vislam_;
+  ros::Time last_laser_topic_time;
 };
 
 #endif

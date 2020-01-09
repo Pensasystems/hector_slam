@@ -254,6 +254,7 @@ HectorMappingRos::~HectorMappingRos()
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 {
   check_laser_scan_=true;
+  last_laser_topic_time = ros::Time::now();
 
 
   if (nodePaused_ || positionHold_) {
@@ -506,22 +507,31 @@ bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::S
 
   void HectorMappingRos::vislamOdomCB (const geometry_msgs::PoseStampedConstPtr& msg)
   {
-    double duration = (ros::Time::now() - begin_vislam_).toSec();
-    if (duration > 5){
+    double vislam_duration = (ros::Time::now() - begin_vislam_).toSec();
+    if (vislam_duration > 5){
       publish_hector_as_mavros_pose = false;
       nodePaused_=true;
       slamProcessor->reset();
-      std::cout<<  duration <<std::endl;
       check_laser_scan_=false;
       
     }
-    if (check_laser_scan_ ){
+    /* This condition check if laser/scan topic stop publishing after a mission then
+      mavros/vision/pose will switch to vislam/vision_pose/pose
+    */
+    double laser_duration = (ros::Time::now() - last_laser_topic_time).toSec(); 
+    if (laser_duration > 2){
+      ekfPose_=*msg;
+      ekfPose_.header.frame_id = "map";
+      ROS_INFO("Laser/scan stopped ");
 
-    vislamOdom_= *msg;
+    }
+
+    if (check_laser_scan_ ){
     ekfPose_.header.stamp=ros::Time::now();
     poseEkfPublisher_.publish(ekfPose_);
     } 
     begin_vislam_ = ros::Time::now();
+    vislamOdom_= *msg;
 
 
   }
