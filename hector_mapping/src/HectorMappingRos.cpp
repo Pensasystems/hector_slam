@@ -253,6 +253,9 @@ HectorMappingRos::~HectorMappingRos()
 
 void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 {
+  check_laser_scan_=true;
+
+
   if (nodePaused_ || positionHold_) {
       double qx=0;
       double qy=0;
@@ -422,7 +425,7 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     ekfPose_.pose.orientation.y=vislamOdom_.pose.orientation.y;
     ekfPose_.pose.orientation.z=vislamOdom_.pose.orientation.z;
     ekfPose_.pose.orientation.w=vislamOdom_.pose.orientation.w;
-    check_laser_scan_=true;
+    
     lastOdomMsg_ = tmp;
   }
 
@@ -510,14 +513,16 @@ bool HectorMappingRos::holdCallback(std_srvs::SetBool::Request& req, std_srvs::S
       slamProcessor->reset();
       std::cout<<  duration <<std::endl;
       check_laser_scan_=false;
+      
     }
     if (check_laser_scan_ ){
 
-    begin_vislam_ = ros::Time::now();
     vislamOdom_= *msg;
     ekfPose_.header.stamp=ros::Time::now();
     poseEkfPublisher_.publish(ekfPose_);
     } 
+    begin_vislam_ = ros::Time::now();
+
 
   }
   
