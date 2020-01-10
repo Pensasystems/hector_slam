@@ -39,8 +39,12 @@
 #include "sensor_msgs/LaserScan.h"
 #include <std_msgs/String.h>
 
+#include <pensa_msgs/SetString.h>
+#include <pensa_msgs/FlightMission.h>
+
 #include "laser_geometry/laser_geometry.h"
 #include "nav_msgs/GetMap.h"
+#include "nav_msgs/Odometry.h"
 
 #include "slam_main/HectorSlamProcessor.h"
 
@@ -50,6 +54,8 @@
 #include <boost/thread.hpp>
 
 #include "PoseInfoContainer.h"
+
+#include <std_srvs/SetBool.h>
 
 
 class HectorDrawings;
@@ -78,6 +84,9 @@ public:
 
   void publishMap(MapPublisherContainer& map_, const hectorslam::GridMap& gridMap, ros::Time timestamp, MapLockerInterface* mapMutex = 0);
 
+  bool holdCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp); // service call for holding the position on height/yaw changing
+  bool pauseCallback(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& rsp); //service call for reseting/stopping the map
+	
   bool rosLaserScanToDataContainer(const sensor_msgs::LaserScan& scan, hectorslam::DataContainer& dataContainer, float scaleToMap);
   bool rosPointCloudToDataContainer(const sensor_msgs::PointCloud& pointCloud, const tf::StampedTransform& laserTransform, hectorslam::DataContainer& dataContainer, float scaleToMap);
 
@@ -86,9 +95,15 @@ public:
   void publishTransformLoop(double p_transform_pub_period_);
   void publishMapLoop(double p_map_pub_period_);
   void publishTransform();
-
+	
   void staticMapCallback(const nav_msgs::OccupancyGrid& map);
-  void initialPoseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
+  void initialPoseCallback(const geometry_msgs::PoseStampedConstPtr& msg);
+  void mavrosPoseCB(const geometry_msgs::PoseStampedConstPtr& msg);
+  void vislamOdomCB (const geometry_msgs::PoseStampedConstPtr& msg);
+  void missionStatusCB (const pensa_msgs::FlightMissionPtr& msg);
+
+  //
+  //void vislamControl(bool pauseVislam);
 
   /*
   void setStaticMapData(const nav_msgs::OccupancyGrid& map);
@@ -106,8 +121,8 @@ protected:
   ros::Subscriber sysMsgSubscriber_;
 
   ros::Subscriber mapSubscriber_;
-  message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped>* initial_pose_sub_;
-  tf::MessageFilter<geometry_msgs::PoseWithCovarianceStamped>* initial_pose_filter_;
+  message_filters::Subscriber<geometry_msgs::PoseStamped>* initial_pose_sub_;
+  tf::MessageFilter<geometry_msgs::PoseStamped>* initial_pose_filter_;
 
   ros::Publisher posePublisher_;
   ros::Publisher poseUpdatePublisher_;
@@ -115,14 +130,35 @@ protected:
   ros::Publisher odometryPublisher_;
   ros::Publisher scan_point_cloud_publisher_;
 
+  ros:: Subscriber mavrosPoseSub_;
+  ros::Publisher mavrosPublisher_;
+
+  ros::Publisher poseEkfPublisher_;
+
+
+  ros:: Subscriber vislamOdomSub_;
+
+  ros:: Subscriber setpointSub_;
+  ros:: Subscriber missionStatusSub_;
+
+
+  ros::ServiceServer pauseServiceServer_;
+  ros::ServiceServer holdServiceServer_;	
+  //ros::ServiceClient pauseServiceClient_;
+
+
+  ros::Timer positionHoldTimer_;
+	
   std::vector<MapPublisherContainer> mapPubContainer;
 
+  tf::StampedTransform lastMapToOdomTf_, lastScanMatchTf_;
   tf::TransformListener tf_;
   tf::TransformBroadcaster* tfB_;
 
   laser_geometry::LaserProjection projector_;
 
   tf::Transform map_to_odom_;
+
 
   boost::thread* map__publish_thread_;
 
@@ -140,6 +176,18 @@ protected:
   bool initial_pose_set_;
   Eigen::Vector3f initial_pose_;
 
+  bool nodePaused_;
+  bool positionHold_;
+  nav_msgs::Odometry lastOdomMsg_;
+  nav_msgs::Odometry lastOdomMsgYaw_;
+  nav_msgs::Odometry twolastOdomMsg_;	
+  geometry_msgs::PoseStamped ekfPose_;
+  geometry_msgs::PoseStamped currentPose_;
+  geometry_msgs::PoseStamped vislamOdom_;
+  double current_pose_yaw_;
+  double residual_x_; // compare the vislam/pose (x) before height changes with vislam/pose (x) during the height change and store it in this variable 
+  double residual_y_; // compare the vislam/pose (y) before height changes with vislam/pose (y) during the height change and store it in this variable 
+	
 
   //-----------------------------------------------------------
   // Parameters
@@ -163,6 +211,8 @@ protected:
   bool p_pub_map_odom_transform_;
   bool p_pub_odometry_;
   bool p_advertise_map_service_;
+  bool publish_hector_as_mavros_pose;
+
   int p_scan_subscriber_queue_size_;
 
   double p_update_factor_free_;
@@ -182,12 +232,18 @@ protected:
   bool p_use_tf_pose_start_estimate_;
   bool p_map_with_known_poses_;
   bool p_timing_output_;
+  bool check_laser_scan_; //it check laser/scan data and if it's not publishing the drone would nottake off. 
 
 
   float p_sqr_laser_min_dist_;
   float p_sqr_laser_max_dist_;
   float p_laser_z_min_value_;
   float p_laser_z_max_value_;
+  /* when the vislam/vision_pose/pose starts publishing this parametere checks if the duration between previous vislam data 
+  //with the current one is more than some seconds it will figure out it's a new mission and needs to reinitialize hector with vislam 
+  */
+  ros::Time begin_vislam_;
+  ros::Time last_laser_topic_time;
 };
 
 #endif
