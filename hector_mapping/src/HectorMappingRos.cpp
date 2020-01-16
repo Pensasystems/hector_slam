@@ -60,6 +60,8 @@ HectorMappingRos::HectorMappingRos()
   ,check_laser_scan_(false)
   , initial_pose_set_(false)
 {
+  ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug);
+
   ros::NodeHandle private_nh_("~");
 
   std::string mapTopic_ = "map";
@@ -290,10 +292,10 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     ekfPose_.pose.position.x=lastOdomMsgYaw_.pose.pose.position.x;
     ekfPose_.pose.position.y=lastOdomMsgYaw_.pose.pose.position.y;
     ekfPose_.pose.position.z=vislamOdom_.pose.position.z;
-    ekfPose_.pose.orientation.x=currentPose_.pose.orientation.x;
-    ekfPose_.pose.orientation.y=currentPose_.pose.orientation.y;
-    ekfPose_.pose.orientation.z=currentPose_.pose.orientation.z;
-    ekfPose_.pose.orientation.w=currentPose_.pose.orientation.w;
+    ekfPose_.pose.orientation.x=vislamOdom_.pose.orientation.x;
+    ekfPose_.pose.orientation.y=vislamOdom_.pose.orientation.y;
+    ekfPose_.pose.orientation.z=vislamOdom_.pose.orientation.z;
+    ekfPose_.pose.orientation.w=vislamOdom_.pose.orientation.w;
     lastOdomMsgYaw_.child_frame_id = p_base_frame_;
     lastOdomMsgYaw_.header.frame_id= p_map_frame_;
     ros::Time now =ros::Time::now();
@@ -422,10 +424,10 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
     ekfPose_.pose.position.x=tmp.pose.pose.position.x;
     ekfPose_.pose.position.y=tmp.pose.pose.position.y;
     ekfPose_.pose.position.z=vislamOdom_.pose.position.z;
-    ekfPose_.pose.orientation.x=vislamOdom_.pose.orientation.x;
-    ekfPose_.pose.orientation.y=vislamOdom_.pose.orientation.y;
-    ekfPose_.pose.orientation.z=vislamOdom_.pose.orientation.z;
-    ekfPose_.pose.orientation.w=vislamOdom_.pose.orientation.w;
+    ekfPose_.pose.orientation.x=currentPose_.pose.orientation.x;
+    ekfPose_.pose.orientation.y=currentPose_.pose.orientation.y;
+    ekfPose_.pose.orientation.z=currentPose_.pose.orientation.z;
+    ekfPose_.pose.orientation.w=currentPose_.pose.orientation.w;
     
     lastOdomMsg_ = tmp;
   }
