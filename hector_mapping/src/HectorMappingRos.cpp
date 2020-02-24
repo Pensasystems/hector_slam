@@ -47,7 +47,7 @@ typedef btScalar tfScalar;
 HectorMappingRos::HectorMappingRos()
     : debugInfoProvider(0), hectorDrawings(0), lastGetMapUpdateIndex(-100), nodePaused_(true), positionHold_(false), publish_hector_as_mavros_pose(false), current_pose_yaw_(0), tfB_(0), map__publish_thread_(0), begin_vislam_(0), residual_x_(0), residual_y_(0), check_laser_scan_(false), initial_pose_set_(false)
 {
-  ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug);
+  // ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug);
 
   ros::NodeHandle private_nh_("~");
 
@@ -243,51 +243,6 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan &scan)
 
   if (nodePaused_ || positionHold_)
   {
-    //   double qx=0;
-    //   double qy=0;
-    //   double qz=0;
-    //   double qw=0;
-    //   qx= currentPose_.pose.orientation.x;
-    //   qy= currentPose_.pose.orientation.y;
-    //   qz= currentPose_.pose.orientation.z;
-    //   qw= currentPose_.pose.orientation.w;
-    //     double siny_cosp = 2 * (qw * qz + qx * qy);
-    //    double cosy_cosp = 1 - 2 * (qy * qy + qz * qz);
-
-    // initial_pose_ = Eigen::Vector3f(currentPose_.pose.position.x, currentPose_.pose.position.y,current_pose_yaw_);
-    // initial_pose_set_ = true;
-    // ROS_DEBUG(" Hector initiated");
-
-    // nav_msgs::Odometry lastOdomMsgYaw_; // Last Msg the held before reseting the map
-    // lastOdomMsgYaw_.pose.pose.position.x = (vislamOdom_.pose.position.x-residual_x_)+lastOdomMsg_.pose.pose.position.x;
-    // lastOdomMsgYaw_.pose.pose.position.y = (vislamOdom_.pose.position.y-residual_y_)+lastOdomMsg_.pose.pose.position.y;
-
-    // if (!publish_hector_as_mavros_pose){
-    //   lastOdomMsgYaw_.pose.pose.position.x = vislamOdom_.pose.position.x;
-    //   lastOdomMsgYaw_.pose.pose.position.y = vislamOdom_.pose.position.y;
-    //       ROS_DEBUG(" Hector initiated with vislam");
-
-    //   }
-    // lastOdomMsgYaw_.pose.pose.orientation.z = vislamOdom_.pose.orientation.z;
-    // lastOdomMsgYaw_.pose.pose.orientation.w = vislamOdom_.pose.orientation.w;
-    // ekfPose_.header=lastOdomMsgYaw_.header;
-    // ekfPose_.header.frame_id = "map";
-    // ekfPose_.pose.position.x=lastOdomMsgYaw_.pose.pose.position.x;
-    // ekfPose_.pose.position.y=lastOdomMsgYaw_.pose.pose.position.y;
-    // ekfPose_.pose.position.z=vislamOdom_.pose.position.z;
-    // ekfPose_.pose.orientation.x=vislamOdom_.pose.orientation.x;
-    // ekfPose_.pose.orientation.y=vislamOdom_.pose.orientation.y;
-    // ekfPose_.pose.orientation.z=vislamOdom_.pose.orientation.z;
-    // ekfPose_.pose.orientation.w=vislamOdom_.pose.orientation.w;
-    // lastOdomMsgYaw_.child_frame_id = p_base_frame_;
-    // lastOdomMsgYaw_.header.frame_id= p_map_frame_;
-    // ros::Time now =ros::Time::now();
-    // lastOdomMsgYaw_.header.stamp = now;
-    // lastScanMatchTf_.stamp_ = now;
-    // lastMapToOdomTf_.stamp_ = now;
-
-    // odometryPublisher_.publish(lastOdomMsgYaw_);
-
     return;
   }
 
