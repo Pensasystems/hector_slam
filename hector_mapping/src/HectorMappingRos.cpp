@@ -132,7 +132,7 @@ HectorMappingRos::HectorMappingRos()
   missionStatusSub_ = node_.subscribe("/drone_arbiter/mission", 1, &HectorMappingRos::missionStatusCB, this);
 
   // mavrosPublisher_ = node_.advertise<nav_msgs::Odometry>("/test", 1);
-  poseEkfPublisher_ = node_.advertise<geometry_msgs::PoseStamped>("ekf/pose", 1);
+  // poseEkfPublisher_ = node_.advertise<geometry_msgs::PoseStamped>("ekf/pose", 1);
   // pauseServiceClient_ = node_.serviceClient<std_srvs::SetBool>("vilamwithCov_pause");
 
   if (p_pub_debug_output_) {
@@ -472,7 +472,7 @@ void HectorMappingRos::vislamOdomCB(const geometry_msgs::PoseStampedConstPtr &ms
   if (check_laser_scan_) {
     ekfPose_.header.stamp = ros::Time::now();
     ekfPose_.pose.position.z = vislamOdom_.pose.position.z;
-    poseEkfPublisher_.publish(ekfPose_);
+    // poseEkfPublisher_.publish(ekfPose_);
   }
   begin_vislam_ = ros::Time::now();
   // vislamOdom_ = *msg;
